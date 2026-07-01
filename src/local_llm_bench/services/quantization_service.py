@@ -4,6 +4,7 @@ from __future__ import annotations
 import subprocess
 import time
 
+from local_llm_bench.constants import SUPPORTED_QUANT_LEVELS
 from local_llm_bench.shared.gatekeeper import ApiGatekeeper
 from local_llm_bench.shared.metrics import BaseMetricsCollectorMixin, RunMetrics
 
@@ -29,6 +30,9 @@ class QuantizationService(BaseMetricsCollectorMixin):
         self, ollama_model_tag: str, quant_level: str, prompt: str, max_new_tokens: int
     ) -> RunMetrics:
         import requests
+
+        if quant_level not in SUPPORTED_QUANT_LEVELS:
+            raise ValueError(f"Unsupported quant level: {quant_level}")
 
         self._start_ram_sampling()
         wall_start = time.monotonic()
