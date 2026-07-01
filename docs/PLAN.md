@@ -1,5 +1,10 @@
 # PLAN — ארכיטקטורה טכנית
 
+**עדכון (גרסה 1.01):** לאחר קריאת `ex05-AirLLM.pdf.pdf` (מסמך המטלה הרשמי
+והמפורט), נוספו: מדידת TTFT/TPOT אמיתית דרך streaming (ADR-4), נתיב שמירה ייעודי
+ל-shards של AirLLM (ADR-5), `CostAnalysisService` לניתוח כלכלי חובה (ר' סעיף 2
+וסעיף 5), ו-Model Roofline diagram כהרחבה מקורית (ADR-6).
+
 ## 1. סקירת שכבות (Context/Container)
 
 ```
@@ -36,7 +41,8 @@ External Consumers
 | `AirllmService` | טעינה שכבה-אחר-שכבה דרך חבילת `airllm` + generate | model_name, precision, prompt, max_new_tokens | `RunMetrics` |
 | `QuantizationService` | הרצה דרך Ollama (GGUF) ברמות קוונטיזציה שונות | model_name, quant_level, prompt, max_new_tokens | `RunMetrics` |
 | `BenchmarkService` | אורקסטרציה: מריץ קומבינציות (שיטה × פרומפט × אורך) ושומר תוצאות | ניסוי (Experiment config) | קובצי JSON תחת `results/` |
-| `ReportService` | קורא תוצאות שמורות, מפיק גרפים/טבלאות | נתיב ל-`results/` | קבצי PNG/HTML תחת `assets/` |
+| `ReportService` | קורא תוצאות שמורות, מפיק גרפים/טבלאות + Model Roofline | נתיב ל-`results/` | קבצי PNG/CSV תחת `assets/` |
+| `CostAnalysisService` | ניתוח כלכלי חובה: עלות API מול On-Prem, נקודת איזון | תוצאות benchmark + `config/economic_assumptions.json` | `BreakevenResult` + גרף |
 
 כל שירות יורש מ-`BaseMetricsCollectorMixin` משותף (ב-`shared/`) שמספק את מדידת
 peak RSS memory (`psutil.Process().memory_info().rss`, נדגם ב-thread נפרד ברקע כדי
@@ -62,10 +68,18 @@ peak RSS memory (`psutil.Process().memory_info().rss`, נדגם ב-thread נפר
 ## 4. מודל הנתונים המשותף
 
 `RunMetrics` (dataclass, ב-`shared/`): `method`, `model_name`, `precision_or_quant`,
-`prompt_tokens`, `max_new_tokens`, `load_time_sec`, `time_to_first_token_sec`,
-`tokens_per_sec`, `peak_ram_mb`, `total_wall_time_sec`, `generated_text`,
-`timestamp`. משמש כפורמט אחיד לכל שלוש השיטות — כך ש-`ReportService` לא צריך לדעת
-משהו על ההבדלים הפנימיים בין השיטות.
+`prompt_tokens`, `max_new_tokens`, `load_time_sec`, **`ttft_sec`** (Time To First
+Token — מדד ל-Prefill), **`tpot_sec`** (Time Per Output Token, ממוצע — מדד
+ל-Decode; מכונה גם ITL/Inter-Token Latency), `tokens_per_sec` (Throughput כולל),
+`peak_ram_mb`, `total_wall_time_sec`, **`estimated_power_wh`** (צריכת חשמל
+משוערת, מבוססת TDP מוגדר בקונפיגורציה × זמן ריצה — מתועד כהערכה, לא מדידה
+אמיתית, ex05 §5.4), `generated_text`, `quality_note`, `timestamp`. משמש כפורמט
+אחיד לכל שלוש השיטות — כך ש-`ReportService` לא צריך לדעת משהו על ההבדלים
+הפנימיים בין השיטות.
+
+**הערה (v1.01):** בגרסה הראשונה של המסמך השדה `time_to_first_token_sec` חושב
+בטעות כזמן ממוצע-לטוקן (כלומר בפועל TPOT, לא TTFT). התוקן: `ttft_sec` ו-
+`tpot_sec` הם כעת שני שדות נפרדים, נמדדים בפועל דרך streaming (ר' ADR-4).
 
 ## 5. ADRs (Architecture Decision Records)
 
@@ -107,6 +121,48 @@ peak RSS memory (`psutil.Process().memory_info().rss`, נדגם ב-thread נפר
 **החלטה:** `BaseMetricsCollectorMixin` מריץ thread נפרד שדוגם `psutil` כל N
 מילישניות לאורך כל ההרצה ושומר את המקסימום — עלות תקורה זניחה, דיוק גבוה משמעותית.
 
+### ADR-4: מדידת TTFT/TPOT אמיתית דרך Streaming (לא קירוב)
+
+**הקשר:** `ex05` §4-5 דורש במפורש הפרדה בין TTFT (Time To First Token — מודד את
+שלב ה-Prefill) לבין TPOT/ITL (Time Per Output Token — מודד את שלב ה-Decode).
+מדידת `generate()` כבלוק אחד (כפי שנעשה בטעות בגרסה הראשונה) לא מאפשרת הפרדה כזו.
+
+**החלטה:** נוסף `shared/generation_timing.py` עם `StreamingTimingMixin`, המשתמש
+ב-`transformers.TextIteratorStreamer` (בת'רד נפרד מריץ את `generate()`, בעוד
+ה-thread הראשי קורא טוקנים מה-streamer וממתד זמן הגעה של כל טוקן). כך:
+`ttft_sec` = הזמן מתחילת הקריאה ועד לטוקן הראשון שמגיע מה-streamer; `tpot_sec` =
+ממוצע הזמן בין טוקנים עוקבים. משותף בין `ModelLoaderService` ל-`AirllmService`
+(שתיהן חושפות ממשק `generate()` תואם-HF) — נמנעת כפילות קוד.
+
+עבור `QuantizationService` (Ollama): אין צורך ב-streaming ידני — Ollama **כבר
+מחזיר** את השדות `prompt_eval_duration` (≈ TTFT) ו-`eval_duration`/`eval_count`
+(ממוצע = TPOT) בתשובת ה-API הרגילה (non-streaming), לכן שם רק מחלצים מהתשובה
+הקיימת (ר' `docs/PRD_quantization.md`).
+
+### ADR-5: נתיב ייעודי לשמירת שכבות AirLLM (`layer_shards_saving_path`)
+
+**הקשר:** `ex05` §6.1 ("Do") מזהיר במפורש: פירוק מודל כבד יוצר קבצי SafeTensors
+רבים ועתירי Disk I/O; אם לא מוגדר נתיב מפורש, AirLLM עלול למלא את כונן ה-OS
+(בדרך כלל `C:`) במהלך הניסוי.
+
+**החלטה:** נוסף `airllm.layer_shards_saving_path` ל-`config/setup.json`
+(ברירת מחדל: תיקייה ייעודית תחת `data/airllm_cache/`, עם הנחיה ב-README להצביע
+לכונן מהיר/נפרד אם קיים). `AirllmService` מעביר את הפרמטר ל-`AutoModel.
+from_pretrained(model_name, layer_shards_saving_path=...)`.
+
+### ADR-6: הרחבה מקורית — Model Roofline Diagram
+
+**הקשר:** `ex05` §7 דורש הרחבה מקורית אחת לפחות; §3 מציע "Model Roofline" כרעיון
+מתקדם — ייצוג ויזואלי שממחיש מתי המערכת עוברת ממגבלת משאב אחד לאחר
+(compute-bound מול memory-bound).
+
+**החלטה:** נבחר Model Roofline כהרחבה המקורית (על פני חלופות כמו LoRA/QLoRA
+נוסף, או השוואת כמה גדלי מודלים) כי הוא: (א) נבנה ישירות מנתונים שכבר נאספים
+(FLOPs משוערים לפי גודל מודל, bytes מועברים לפי peak RAM ורוחב פס), (ב) עונה
+ישירות על שאלת המחקר הראשונה (`ex05` §4), ו-(ג) לא דורש ניסוי/הורדה נוספים —
+רק חישוב ו-`ReportService.plot_model_roofline()` נוסף. מתועד גם ב-
+`docs/PRD_benchmark_reporting.md`.
+
 ## 6. תרשים תהליך הרצת benchmark מלא (זרימה)
 
 ```
@@ -128,5 +184,6 @@ class LocalLLMBenchSDK:
     def run_quantized(self, prompt: str, quant_level: str, max_new_tokens: int) -> RunMetrics: ...
     def run_full_benchmark_suite(self) -> Path:  # -> results file path
     def generate_report(self, results_path: Path) -> Path:  # -> assets dir
+    def run_economic_analysis(self, results_path: Path) -> BreakevenResult: ...
     def probe_hardware(self) -> HardwareSpec: ...
 ```
