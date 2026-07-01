@@ -19,7 +19,8 @@ class ReportService:
     def __init__(self, assets_dir: Path):
         self._assets_dir = assets_dir
 
-    def _load_results(self, results_path: Path):
+    def load_results(self, results_path: Path):
+        """Public loader — reused by generate() and by SDK.generate_model_roofline()."""
         import pandas as pd
 
         if not results_path.exists() or not any(results_path.glob("*.json")):
@@ -31,7 +32,7 @@ class ReportService:
         return pd.DataFrame.from_records(records)
 
     def generate(self, results_path: Path) -> Path:
-        df = self._load_results(results_path)
+        df = self.load_results(results_path)
         self._assets_dir.mkdir(parents=True, exist_ok=True)
 
         summary = (
