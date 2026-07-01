@@ -1,5 +1,5 @@
 {
-  "version": "1.00",
+  "version": "1.01",
   "benchmark": {
     "model_name": "microsoft/Phi-3-medium-4k-instruct",
     "fallback_model_name": "microsoft/Phi-3-mini-4k-instruct",
@@ -11,7 +11,11 @@
     ],
     "quant_levels": ["Q4_K_M", "Q2_K"],
     "results_dir": "results",
-    "assets_dir": "assets"
+    "assets_dir": "assets",
+    "assumed_tdp_watts": 28.0
+  },
+  "airllm": {
+    "layer_shards_saving_path": "data/airllm_cache"
   },
   "ollama": {
     "host": "http://localhost:11434"

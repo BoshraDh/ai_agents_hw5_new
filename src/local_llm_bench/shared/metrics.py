@@ -23,10 +23,15 @@ class RunMetrics:
     succeeded: bool = True
     error: str | None = None
     load_time_sec: float = 0.0
-    time_to_first_token_sec: float = 0.0
+    ttft_sec: float = 0.0
+    """Time To First Token — measures the Prefill stage (KV cache build + first-token compute)."""
+    tpot_sec: float = 0.0
+    """Time Per Output Token, averaged — measures the Decode stage (a.k.a. Inter-Token Latency)."""
     tokens_per_sec: float = 0.0
     peak_ram_mb: float = 0.0
     total_wall_time_sec: float = 0.0
+    estimated_power_wh: float = 0.0
+    """Estimated (not measured) energy use: configured assumed TDP watts x wall time."""
     generated_text: str = ""
     quality_note: str | None = None
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())

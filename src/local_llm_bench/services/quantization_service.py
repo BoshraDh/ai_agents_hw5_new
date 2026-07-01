@@ -4,17 +4,23 @@ from __future__ import annotations
 import subprocess
 import time
 
-from local_llm_bench.constants import SUPPORTED_QUANT_LEVELS
+from local_llm_bench.constants import DEFAULT_ASSUMED_TDP_WATTS, SECONDS_PER_HOUR, SUPPORTED_QUANT_LEVELS
 from local_llm_bench.shared.gatekeeper import ApiGatekeeper
 from local_llm_bench.shared.metrics import BaseMetricsCollectorMixin, RunMetrics
+
+_NANOSECONDS_PER_SECOND = 1_000_000_000
 
 
 class QuantizationService(BaseMetricsCollectorMixin):
     """Runs a quantized GGUF variant of the model through the local Ollama HTTP API."""
 
-    def __init__(self, gatekeeper: ApiGatekeeper, ollama_host: str):
+    def __init__(
+        self, gatekeeper: ApiGatekeeper, ollama_host: str,
+        assumed_tdp_watts: float = DEFAULT_ASSUMED_TDP_WATTS,
+    ):
         self._gatekeeper = gatekeeper
         self._host = ollama_host
+        self._assumed_tdp_watts = assumed_tdp_watts
 
     def _ensure_available(self) -> None:
         import requests
@@ -63,6 +69,13 @@ class QuantizationService(BaseMetricsCollectorMixin):
             new_tokens = payload.get("eval_count", max_new_tokens)
             tokens_per_sec = new_tokens / generation_time if generation_time > 0 else 0.0
 
+            # Ollama already reports Prefill/Decode timing natively (nanoseconds) —
+            # no need for our own streaming measurement here (see PLAN.md ADR-4).
+            ttft = payload.get("prompt_eval_duration", 0) / _NANOSECONDS_PER_SECOND
+            eval_duration_sec = payload.get("eval_duration", 0) / _NANOSECONDS_PER_SECOND
+            tpot = eval_duration_sec / max(new_tokens - 1, 1) if new_tokens > 1 else eval_duration_sec
+
+            total_wall = time.monotonic() - wall_start
             return RunMetrics(
                 method="quantized",
                 model_name=ollama_model_tag,
@@ -70,10 +83,12 @@ class QuantizationService(BaseMetricsCollectorMixin):
                 prompt_tokens=payload.get("prompt_eval_count", 0),
                 max_new_tokens=max_new_tokens,
                 load_time_sec=round(load_time, 3),
-                time_to_first_token_sec=round(generation_time / max(new_tokens, 1), 3),
+                ttft_sec=round(ttft, 3),
+                tpot_sec=round(tpot, 3),
                 tokens_per_sec=round(tokens_per_sec, 3),
                 peak_ram_mb=round(self._stop_ram_sampling(), 1),
-                total_wall_time_sec=round(time.monotonic() - wall_start, 3),
+                total_wall_time_sec=round(total_wall, 3),
+                estimated_power_wh=round(self._assumed_tdp_watts * (total_wall / SECONDS_PER_HOUR), 4),
                 generated_text=generated_text,
             )
         except Exception as exc:  # noqa: BLE001

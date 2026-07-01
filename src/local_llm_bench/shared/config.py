@@ -10,7 +10,11 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from local_llm_bench.constants import DEFAULT_CONFIG_PATH, DEFAULT_RATE_LIMIT_PATH
+from local_llm_bench.constants import (
+    DEFAULT_ASSUMED_TDP_WATTS,
+    DEFAULT_CONFIG_PATH,
+    DEFAULT_RATE_LIMIT_PATH,
+)
 
 
 @dataclass
@@ -23,6 +27,8 @@ class BenchmarkSettings:
     quant_levels: list[str]
     results_dir: str
     assets_dir: str
+    assumed_tdp_watts: float
+    airllm_layer_shards_saving_path: str
 
 
 class ConfigManager:
@@ -55,7 +61,14 @@ class ConfigManager:
             quant_levels=b["quant_levels"],
             results_dir=b["results_dir"],
             assets_dir=b["assets_dir"],
+            assumed_tdp_watts=b.get("assumed_tdp_watts", DEFAULT_ASSUMED_TDP_WATTS),
+            airllm_layer_shards_saving_path=self._setup.get("airllm", {}).get(
+                "layer_shards_saving_path", "data/airllm_cache"
+            ),
         )
+
+    def get_economic_assumptions(self) -> dict:
+        return self._load_json(self._root / "config" / "economic_assumptions.json")
 
     def get_rate_limit(self, service: str) -> dict:
         services = self._rate_limits["rate_limits"]["services"]
