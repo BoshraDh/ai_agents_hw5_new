@@ -5,63 +5,63 @@
 ## Phase 0 — תכנון (מסמכים)
 - [x] `docs/PRD.md`
 - [x] `docs/PLAN.md`
-- [~] `docs/TODO.md` (קובץ זה)
-- [ ] `docs/PRD_model_loader.md`
-- [ ] `docs/PRD_airllm_execution.md`
-- [ ] `docs/PRD_quantization.md`
-- [ ] `docs/PRD_benchmark_reporting.md`
-- [ ] אישור כל מסמכי Phase 0 לפני מעבר ל-Phase 1
+- [x] `docs/TODO.md` (קובץ זה)
+- [x] `docs/PRD_model_loader.md`
+- [x] `docs/PRD_airllm_execution.md`
+- [x] `docs/PRD_quantization.md`
+- [x] `docs/PRD_benchmark_reporting.md`
+- [x] אישור כל מסמכי Phase 0 לפני מעבר ל-Phase 1
 
 **Definition of Done:** כל 7 המסמכים קיימים, מכילים את כל הסעיפים הנדרשים לפי
 `software_submission_guidelines-V3.pdf` §2.2-2.3, ו-commit לכל אחד.
 
 ## Phase 1 — שלד קוד (ללא הרצה)
-- [ ] מבנה תיקיות `src/local_llm_bench/{sdk,services,shared}` + `__init__.py`-ים
-- [ ] `shared/constants.py`
-- [ ] `shared/version.py` (מתחיל מ-1.00)
-- [ ] `shared/config.py` — `ConfigManager`
-- [ ] `shared/gatekeeper.py` — `ApiGatekeeper`
-- [ ] `shared/hardware_probe.py` — `HardwareProbeMixin`
-- [ ] `shared/metrics.py` — `RunMetrics` dataclass + `BaseMetricsCollectorMixin`
-- [ ] `services/model_loader_service.py`
-- [ ] `services/airllm_service.py`
-- [ ] `services/quantization_service.py`
-- [ ] `services/benchmark_service.py`
-- [ ] `services/report_service.py`
-- [ ] `sdk/sdk.py` — `LocalLLMBenchSDK`
-- [ ] `main.py` — CLI (argparse), קורא רק ל-SDK
+- [x] מבנה תיקיות `src/local_llm_bench/{sdk,services,shared}` + `__init__.py`-ים
+- [x] `shared/constants.py` (ב-`local_llm_bench/constants.py`)
+- [x] `shared/version.py` (מתחיל מ-1.00)
+- [x] `shared/config.py` — `ConfigManager`
+- [x] `shared/gatekeeper.py` — `ApiGatekeeper`
+- [x] `shared/hardware_probe.py` — `HardwareProbeMixin`
+- [x] `shared/metrics.py` — `RunMetrics` dataclass + `BaseMetricsCollectorMixin`
+- [x] `services/model_loader_service.py`
+- [x] `services/airllm_service.py`
+- [x] `services/quantization_service.py`
+- [x] `services/benchmark_service.py`
+- [x] `services/report_service.py`
+- [x] `sdk/sdk.py` — `LocalLLMBenchSDK`
+- [x] `main.py` — CLI (argparse), קורא רק ל-SDK
 
-**Definition of Done:** כל קובץ ≤150 שורות, docstrings מלאים, `ruff check` נקי
-(ייבדק בשלב ההרצה), ללא ערכים מוקשחים (מאומת ידנית בסקירת קוד).
+**Definition of Done:** כל קובץ ≤150 שורות, docstrings מלאים ✓ (נבדק ידנית).
+`ruff check` בפועל וכיסוי בדיקות בפועל — ימתינו ל-`uv sync` בשלב ההרצה (Phase 4).
 
 ## Phase 2 — בדיקות (עם mocks, ללא רשת)
-- [ ] `tests/conftest.py` — fixtures משותפים + mocks ל-HF/AirLLM/Ollama
-- [ ] `tests/unit/test_config.py`
-- [ ] `tests/unit/test_gatekeeper.py`
-- [ ] `tests/unit/test_hardware_probe.py`
-- [ ] `tests/unit/test_metrics.py`
-- [ ] `tests/unit/test_model_loader_service.py`
-- [ ] `tests/unit/test_airllm_service.py`
-- [ ] `tests/unit/test_quantization_service.py`
-- [ ] `tests/unit/test_benchmark_service.py`
-- [ ] `tests/unit/test_report_service.py`
-- [ ] `tests/unit/test_sdk.py`
-- [ ] `tests/integration/test_full_suite_mocked.py`
-- [ ] `tests/integration/test_real_smoke.py` (מסומן `@pytest.mark.slow`, לא רץ כברירת מחדל)
+- [x] `tests/conftest.py` — fixtures משותפים + mocks ל-HF/AirLLM/Ollama
+- [x] `tests/unit/test_config.py`
+- [x] `tests/unit/test_gatekeeper.py`
+- [x] `tests/unit/test_hardware_probe.py`
+- [x] `tests/unit/test_metrics.py`
+- [x] `tests/unit/test_model_loader_service.py`
+- [x] `tests/unit/test_airllm_service.py`
+- [x] `tests/unit/test_quantization_service.py`
+- [x] `tests/unit/test_benchmark_service.py`
+- [x] `tests/unit/test_report_service.py`
+- [x] `tests/unit/test_sdk.py`
+- [x] `tests/integration/test_full_suite_mocked.py`
+- [x] `tests/integration/test_real_smoke.py` (מסומן `@pytest.mark.slow`, לא רץ כברירת מחדל)
 
-**Definition of Done:** `uv run pytest` (בשלב ההרצה) מעביר את כל הבדיקות הלא-slow,
-כיסוי ≥85%.
+**Definition of Done:** קוד הבדיקות כתוב ומכסה happy-path + edge cases לכל שירות.
+הרצה בפועל של `uv run pytest` וּוידוא כיסוי ≥85% בפועל — ב-Phase 4 (דורש `uv sync`).
 
 ## Phase 3 — קבצי תשתית
-- [ ] `pyproject.toml` (deps, ruff, pytest, coverage config)
-- [ ] `config/setup.json`
-- [ ] `config/rate_limits.json`
-- [ ] `.env-example`
-- [ ] `.gitignore`
-- [ ] `README.md`
-- [ ] `prompt_log.md`
-- [ ] `notebooks/results_analysis.ipynb` (שלד)
-- [ ] `data/.gitkeep`, `results/.gitkeep`, `assets/.gitkeep`
+- [x] `pyproject.toml` (deps, ruff, pytest, coverage config)
+- [x] `config/setup.json`
+- [x] `config/rate_limits.json`
+- [x] `.env-example`
+- [x] `.gitignore`
+- [x] `README.md`
+- [x] `prompt_log.md`
+- [x] `notebooks/results_analysis.ipynb` (שלד, ללא תוצאות אמיתיות עדיין)
+- [x] `data/.gitkeep`, `results/.gitkeep`, `assets/.gitkeep`
 
 ## Phase 4 — הרצה בפועל (שלב המשך, מחוץ להיקף השיחה הנוכחית)
 - [ ] `uv sync`
