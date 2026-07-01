@@ -1,0 +1,70 @@
+"""Baseline execution: full model load into RAM via transformers, then .generate() on CPU.
+
+This is the "what happens when you try to run a large model on your own CPU" path
+the assignment asks for — no GPU, no layer streaming, everything resident in RAM.
+"""
+from __future__ import annotations
+
+import time
+
+from local_llm_bench.shared.gatekeeper import ApiGatekeeper
+from local_llm_bench.shared.metrics import BaseMetricsCollectorMixin, RunMetrics
+
+
+class ModelLoaderService(BaseMetricsCollectorMixin):
+    """Runs a Hugging Face model the standard way: load all weights, then generate."""
+
+    def __init__(self, gatekeeper: ApiGatekeeper):
+        self._gatekeeper = gatekeeper
+
+    def run(self, model_name: str, precision: str, prompt: str, max_new_tokens: int) -> RunMetrics:
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        dtype_map = {"fp32": torch.float32, "fp16": torch.float16, "bf16": torch.bfloat16}
+        if precision not in dtype_map:
+            raise ValueError(f"Unsupported precision: {precision}")
+
+        self._start_ram_sampling()
+        wall_start = time.monotonic()
+        try:
+            tokenizer = self._gatekeeper.execute(
+                lambda: AutoTokenizer.from_pretrained(model_name),
+                description=f"download tokenizer {model_name}",
+            )
+            load_start = time.monotonic()
+            model = self._gatekeeper.execute(
+                lambda: AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=dtype_map[precision]),
+                description=f"download+load model {model_name}",
+            )
+            load_time = time.monotonic() - load_start
+
+            inputs = tokenizer(prompt, return_tensors="pt")
+            gen_start = time.monotonic()
+            output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)
+            generation_time = time.monotonic() - gen_start
+
+            generated_text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
+            new_tokens = output_ids.shape[1] - inputs["input_ids"].shape[1]
+            tokens_per_sec = new_tokens / generation_time if generation_time > 0 else 0.0
+
+            return RunMetrics(
+                method="baseline",
+                model_name=model_name,
+                precision_or_quant=precision,
+                prompt_tokens=inputs["input_ids"].shape[1],
+                max_new_tokens=max_new_tokens,
+                load_time_sec=round(load_time, 3),
+                time_to_first_token_sec=round(generation_time / max(new_tokens, 1), 3),
+                tokens_per_sec=round(tokens_per_sec, 3),
+                peak_ram_mb=round(self._stop_ram_sampling(), 1),
+                total_wall_time_sec=round(time.monotonic() - wall_start, 3),
+                generated_text=generated_text,
+            )
+        except Exception as exc:  # noqa: BLE001 - a failure here IS a valid experiment result
+            self._stop_ram_sampling()
+            return RunMetrics(
+                method="baseline", model_name=model_name, precision_or_quant=precision,
+                prompt_tokens=0, max_new_tokens=max_new_tokens, succeeded=False, error=str(exc),
+                total_wall_time_sec=round(time.monotonic() - wall_start, 3),
+            )
