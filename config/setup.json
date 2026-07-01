@@ -17,6 +17,11 @@
   "airllm": {
     "layer_shards_saving_path": "data/airllm_cache"
   },
+  "roofline": {
+    "assumed_peak_gflops": 200.0,
+    "assumed_memory_bandwidth_gbps": 50.0,
+    "_note": "Illustrative placeholders for a 4-core ultrabook CPU; replace with measured/vendor values during Phase 4 execution."
+  },
   "ollama": {
     "host": "http://localhost:11434"
   }

@@ -70,6 +70,11 @@ class ConfigManager:
     def get_economic_assumptions(self) -> dict:
         return self._load_json(self._root / "config" / "economic_assumptions.json")
 
+    def get_roofline_assumptions(self) -> dict:
+        return self._setup.get("roofline", {
+            "assumed_peak_gflops": 200.0, "assumed_memory_bandwidth_gbps": 50.0,
+        })
+
     def get_rate_limit(self, service: str) -> dict:
         services = self._rate_limits["rate_limits"]["services"]
         return services.get(service, services["default"])
