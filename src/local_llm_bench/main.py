@@ -12,12 +12,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Local LLM Bench — baseline vs AirLLM vs quantized")
     parser.add_argument(
         "--mode", required=True,
-        choices=["baseline", "airllm", "quantized", "full-suite", "report", "hardware"],
+        choices=["baseline", "airllm", "quantized", "full-suite", "report", "hardware",
+                 "economic", "roofline"],
     )
     parser.add_argument("--prompt", default="Explain how virtual memory works in one paragraph.")
     parser.add_argument("--max-new-tokens", type=int, default=64)
     parser.add_argument("--quant-level", default="Q4_K_M")
     parser.add_argument("--results-path", default="results")
+    parser.add_argument("--avg-run-seconds", type=float, default=5.0,
+                         help="Assumed avg. run time per request for economic analysis")
+    parser.add_argument("--model-params-billion", type=float, default=14.0,
+                         help="Model parameter count (billions) for the Model Roofline chart")
     return parser
 
 
@@ -40,6 +45,12 @@ def main() -> None:
     elif args.mode == "report":
         assets_path = sdk.generate_report(Path(args.results_path))
         print(f"Report assets saved to {assets_path}")
+    elif args.mode == "economic":
+        result = sdk.run_economic_analysis(args.avg_run_seconds)
+        print(f"Break-even volume (requests/month): {result.breakeven_volume}")
+    elif args.mode == "roofline":
+        out_path = sdk.generate_model_roofline(Path(args.results_path), args.model_params_billion)
+        print(f"Model Roofline chart saved to {out_path}")
 
 
 if __name__ == "__main__":
