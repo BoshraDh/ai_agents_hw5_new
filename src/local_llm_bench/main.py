@@ -3,9 +3,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from local_llm_bench.sdk import LocalLLMBenchSDK
+
+
+def _ensure_utf8_console() -> None:
+    """Windows consoles default to a legacy codepage (e.g. cp1252) that cannot encode
+    non-Latin characters. This project's own path contains Hebrew directory names, so
+    without this any print()/log of a path crashes with UnicodeEncodeError."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,6 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    _ensure_utf8_console()
     args = build_parser().parse_args()
     sdk = LocalLLMBenchSDK()
 
