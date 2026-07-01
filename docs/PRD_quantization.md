@@ -21,6 +21,11 @@
 - קלט: `model_name`, `quant_level: Literal["Q4_K_M","Q2_K"]`, `prompt`,
   `max_new_tokens`. פלט: אותו `RunMetrics`, עם שדה נוסף `quality_note: str | None`
   (הערכה איכותנית ידנית/heuristic של הפלט מול ה-baseline).
+- **TTFT/TPOT (v1.01)**: בניגוד ל-`ModelLoaderService`/`AirllmService` (הזקוקים
+  ל-streaming ידני, ר' `docs/PLAN.md` ADR-4), תשובת ה-API הרגילה (non-streaming)
+  של Ollama **כבר כוללת** `prompt_eval_duration` (ננושניות — משמש כ-TTFT/Prefill
+  proxy) ו-`eval_duration`/`eval_count` (ממוצע = TPOT/Decode proxy). השירות מחלץ
+  את השדות הללו ישירות מהתשובה, ללא צורך במדידה עצמאית.
 - כל תקשורת עם Ollama (`ollama pull`, קריאת API על `localhost:11434`) עוברת דרך
   `ApiGatekeeper` — כולל retry אם השירות המקומי עדיין לא עלה (`ollama serve`).
 - השירות **לא** מתקין/מפעיל את Ollama בעצמו — בודק זמינות (`GET /api/tags`) ומחזיר

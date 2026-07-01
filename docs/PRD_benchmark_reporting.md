@@ -12,7 +12,16 @@
 - **`ReportService`**: קורא קובצי `results/*.json` (ללא תלות בהרצה מחדש של
   המודלים) ומפיק: (א) טבלת השוואה מרוכזת (CSV/Markdown), (ב) bar chart להשוואת
   peak RAM בין שלוש השיטות, (ג) line chart של tokens/sec מול אורך הפלט לכל שיטה,
-  (ד) heatmap אופציונלי (שיטה × אורך פלט → latency). כל הגרפים נשמרים תחת `assets/`.
+  (ד) heatmap אופציונלי (שיטה × אורך פלט → latency), (ה) **Model Roofline diagram**
+  — ההרחבה המקורית שנבחרה (ר' `docs/PLAN.md` ADR-6): ציר X = arithmetic intensity
+  משוער (FLOPs/byte לפי גודל המודל וה-precision), ציר Y = תפוקה נמדדת
+  (tokens/sec), עם קו "תקרת" ה-memory-bandwidth וה-compute-ceiling התיאורטיים —
+  ממחיש ויזואלית עבור כל שיטה (Baseline/AirLLM/Quantized) האם היא פועלת במשטר
+  memory-bound או compute-bound, ועונה ישירות על שאלת המחקר הראשונה ב-PRD.md §1.1.
+  (ו) **break-even chart** — מיוצר על ידי `CostAnalysisService`
+  (ר' `docs/PRD_economic_analysis.md`), לא על ידי `ReportService` עצמו, אך נשמר
+  תחת אותה תיקיית `assets/` לצורך שילוב אחיד ב-README. כל הגרפים נשמרים תחת
+  `assets/`.
 
 ## דרישות ספציפיות
 
