@@ -84,15 +84,26 @@ Model Roofline), ו-Phase 4 עודכן לכלול בדיקת עשן, שאלות 
 | 4.3 עיבוד נתונים + ניתוח כלכלי | 1–1.5 שעות | ~30 דקות |
 | 4.4 כתיבת README כדוח | 1–1.5 שעות | ~60 דקות |
 
-- [ ] `uv sync`
+- [x] `uv sync --extra dev` — הותקנו 175 חבילות בפועל, כולל `airllm==3.0.1`,
+      `torch==2.12.1+cpu`, `transformers==5.12.1` (Python 3.14.5 שנבחר על ידי uv;
+      עבד ללא בעיות תאימות)
+- [x] **תוקנה תקלה שהתגלתה**: `UnicodeEncodeError` בקונסולת Windows כי נתיב
+      הפרויקט מכיל תווים בעברית — נפתר ב-`main.py` (`_ensure_utf8_console`,
+      commit `66bc00a`)
 - [ ] הגדרת `HF_TOKEN` ב-`.env` (אם עוברים למודל gated; לא נדרש עבור Phi-3-medium)
 - [ ] וידוא `airllm.layer_shards_saving_path` מצביע לכונן עם מקום פנוי מספק
-- [ ] **בדיקת עשן (ex05 §6.1 "Do")**: מודל קטן (Phi-3-mini) + קוונטיזציה Q2 —
-      לוודא שכל הצנרת (baseline→airllm→quantized→report) עובדת קצה-לקצה, **לפני**
-      מעבר למודל הגדול
-- [ ] הורדת Phi-3-medium-4k-instruct, הרצת Baseline (FP32) + מדידת TTFT/TPOT/RAM —
+- [x] **בדיקת עשן (ex05 §6.1 "Do")**: `phi3:mini` דרך Ollama רץ בהצלחה —
+      total 24.95s (load 19.26s), TTFT 1.77s, TPOT ~0.153s/token (~6.8 tok/sec).
+      תוצאה נשמרה ב-`results/ollama_smoke_test_phi3_mini.json`. הצנרת עובדת.
+- [ ] **מודל גדול מדי ל-Ollama, אך עובד ב-AirLLM** (לפי בקשת המשתמשת): הורדת מודל
+      גדול (למשל Qwen2.5-72B-Instruct) דרך Ollama, הרצה + תיעוד כשל/איטיות
+      בלתי-נסבלת (screenshot/log) — **ממתין לאישור מפורש** (הורדה ~47GB, זמן ריצה
+      ארוך)
+- [ ] אותו מודל גדול, הפעם דרך AirLLM (Hugging Face SafeTensors) — הרצה + תיעוד
+      הצלחה עם peak RAM נמוך משמעותית
+- [ ] הרצת Baseline הרשמי (FP32, Phi-3-medium-4k-instruct) + מדידת TTFT/TPOT/RAM —
       **לתעד בפירוט חי גם אם המודל נכשל/נתקע/איטי מדי** (זו תוצאה לגיטימית)
-- [ ] הרצת AirLLM על אותו מודל בדיוק + אותן מדידות
+- [ ] הרצת AirLLM על Phi-3-medium בדיוק + אותן מדידות (להשוואה כמותית מלאה)
 - [ ] `ollama pull` למודל/גרסה קוונטזית מקבילה, הרצה בלפחות 2 רמות קוונטיזציה
       (למשל Q4_K_M, Q2_K) + הערכת איכות פלט איכותנית
 - [ ] הרצת `run_full_benchmark_suite` (ניתוח רגישות: אורכי פרומפט/טוקנים, OAT)

@@ -1,0 +1,16 @@
+{
+  "purpose": "Pipeline smoke test (ex05 section 6.1 'Do': start small before scaling up) — proves Ollama + this project's quantization pipeline works end-to-end.",
+  "model": "phi3:mini",
+  "prompt": "Explain in one short sentence what virtual memory is.",
+  "response": "Virtual memory is a computer's, in reality, uses hard disk space to simulate additional RAM when physical RAM is insufficient.",
+  "total_duration_sec": 24.9522895,
+  "load_duration_sec": 19.2631071,
+  "prompt_eval_count": 20,
+  "prompt_eval_duration_sec": 1.774298,
+  "eval_count": 26,
+  "eval_duration_sec": 3.825119,
+  "ttft_sec_derived": 1.774298,
+  "tpot_sec_derived": 0.153,
+  "tokens_per_sec_derived": 6.8,
+  "timestamp": "2026-07-01T20:47:21Z"
+}
