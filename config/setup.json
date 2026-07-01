@@ -1,0 +1,19 @@
+{
+  "version": "1.00",
+  "benchmark": {
+    "model_name": "microsoft/Phi-3-medium-4k-instruct",
+    "fallback_model_name": "microsoft/Phi-3-mini-4k-instruct",
+    "precision": "fp32",
+    "max_new_tokens_options": [16, 64, 128],
+    "prompts": [
+      "Explain how virtual memory works in one paragraph.",
+      "Summarize the difference between CPU and GPU architectures in two sentences."
+    ],
+    "quant_levels": ["Q4_K_M", "Q2_K"],
+    "results_dir": "results",
+    "assets_dir": "assets"
+  },
+  "ollama": {
+    "host": "http://localhost:11434"
+  }
+}
