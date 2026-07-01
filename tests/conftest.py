@@ -34,7 +34,7 @@ def pytest_collection_modifyitems(config, items):
 @pytest.fixture
 def sample_setup_config() -> dict:
     return {
-        "version": "1.00",
+        "version": "1.01",
         "benchmark": {
             "model_name": "microsoft/Phi-3-medium-4k-instruct",
             "fallback_model_name": "microsoft/Phi-3-mini-4k-instruct",
@@ -44,7 +44,10 @@ def sample_setup_config() -> dict:
             "quant_levels": ["Q4_K_M", "Q2_K"],
             "results_dir": "results",
             "assets_dir": "assets",
+            "assumed_tdp_watts": 28.0,
         },
+        "airllm": {"layer_shards_saving_path": "data/airllm_cache"},
+        "roofline": {"assumed_peak_gflops": 200.0, "assumed_memory_bandwidth_gbps": 50.0},
         "ollama": {"host": "http://localhost:11434"},
     }
 
@@ -66,11 +69,42 @@ def sample_rate_limits_config() -> dict:
 
 
 @pytest.fixture
-def project_root(tmp_path: Path, sample_setup_config: dict, sample_rate_limits_config: dict) -> Path:
+def sample_economic_assumptions() -> dict:
+    return {
+        "version": "1.00",
+        "api_pricing": {
+            "provider": "test-provider",
+            "price_per_1k_input_tokens_usd": 0.03,
+            "price_per_1k_output_tokens_usd": 0.06,
+            "cached_token_discount_ratio": 0.5,
+        },
+        "on_prem": {
+            "hardware_cost_usd": 1500.0,
+            "hardware_lifespan_years": 3,
+            "electricity_price_usd_per_kwh": 0.18,
+            "annual_maintenance_usd": 50.0,
+        },
+        "cloud_gpu": {"include": False, "price_per_gpu_hour_usd": 2.5},
+        "usage_scenario": {
+            "avg_input_tokens_per_request": 500,
+            "avg_output_tokens_per_request": 200,
+            "usage_volumes_per_month": [10, 100, 1000, 10000, 100000],
+        },
+    }
+
+
+@pytest.fixture
+def project_root(
+    tmp_path: Path, sample_setup_config: dict, sample_rate_limits_config: dict,
+    sample_economic_assumptions: dict,
+) -> Path:
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "setup.json").write_text(json.dumps(sample_setup_config), encoding="utf-8")
     (config_dir / "rate_limits.json").write_text(json.dumps(sample_rate_limits_config), encoding="utf-8")
+    (config_dir / "economic_assumptions.json").write_text(
+        json.dumps(sample_economic_assumptions), encoding="utf-8",
+    )
     return tmp_path
 
 
@@ -82,6 +116,17 @@ class FakeTensor:
 
     def __getitem__(self, _idx):
         return self
+
+
+class FakeStreamer:
+    """Stand-in for transformers.TextIteratorStreamer: a pre-populated iterable of text
+    chunks, so tests don't need real threading/streamer synchronization with generate()."""
+
+    def __init__(self, chunks: list[str]):
+        self._chunks = chunks
+
+    def __iter__(self):
+        yield from self._chunks
 
 
 @pytest.fixture
@@ -103,6 +148,9 @@ def fake_ml_stack(monkeypatch):
     fake_transformers = types.ModuleType("transformers")
     fake_transformers.AutoTokenizer = MagicMock(from_pretrained=MagicMock(return_value=tokenizer))
     fake_transformers.AutoModelForCausalLM = MagicMock(from_pretrained=MagicMock(return_value=model))
+    fake_transformers.TextIteratorStreamer = MagicMock(
+        return_value=FakeStreamer(["gen", "erated", " text"]),
+    )
     monkeypatch.setitem(sys.modules, "transformers", fake_transformers)
 
     airllm_model = MagicMock()

@@ -20,6 +20,9 @@ def test_run_returns_successful_metrics(fake_ml_stack):
     assert metrics.method == "baseline"
     assert metrics.tokens_per_sec >= 0
     assert metrics.generated_text == "generated text"
+    assert metrics.ttft_sec >= 0
+    assert metrics.tpot_sec >= 0
+    assert metrics.estimated_power_wh >= 0
 
 
 def test_run_rejects_unsupported_precision_fail_fast(fake_ml_stack):

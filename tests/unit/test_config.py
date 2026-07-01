@@ -9,6 +9,20 @@ def test_get_benchmark_settings_reads_model_name(project_root):
     settings = config.get_benchmark_settings()
     assert settings.model_name == "microsoft/Phi-3-medium-4k-instruct"
     assert settings.precision == "fp32"
+    assert settings.assumed_tdp_watts == 28.0
+    assert settings.airllm_layer_shards_saving_path == "data/airllm_cache"
+
+
+def test_get_economic_assumptions_reads_pricing(project_root):
+    config = ConfigManager(project_root)
+    assumptions = config.get_economic_assumptions()
+    assert assumptions["api_pricing"]["price_per_1k_input_tokens_usd"] == 0.03
+
+
+def test_get_roofline_assumptions_reads_config(project_root):
+    config = ConfigManager(project_root)
+    roofline = config.get_roofline_assumptions()
+    assert roofline["assumed_peak_gflops"] == 200.0
 
 
 def test_get_rate_limit_falls_back_to_default(project_root):

@@ -12,11 +12,13 @@ def _gatekeeper() -> ApiGatekeeper:
 
 
 def test_run_returns_successful_metrics(fake_ml_stack):
-    service = AirllmService(_gatekeeper())
+    service = AirllmService(_gatekeeper(), layer_shards_saving_path="data/airllm_cache")
     metrics = service.run("fake/model", "fp16", "hello", 20)
     assert metrics.succeeded is True
     assert metrics.method == "airllm"
     assert metrics.generated_text == "generated text"
+    assert metrics.ttft_sec >= 0
+    assert metrics.tpot_sec >= 0
 
 
 def test_run_handles_load_failure_gracefully(fake_ml_stack):

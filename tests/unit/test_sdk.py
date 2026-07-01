@@ -22,3 +22,10 @@ def test_probe_hardware_returns_spec(project_root, fake_ml_stack):
     sdk = LocalLLMBenchSDK(project_root)
     spec = sdk.probe_hardware()
     assert spec.total_ram_gb > 0
+
+
+def test_run_economic_analysis_returns_breakeven_result(project_root, fake_ml_stack):
+    sdk = LocalLLMBenchSDK(project_root)
+    result = sdk.run_economic_analysis(avg_run_seconds_per_request=5.0)
+    assert len(result.usage_volumes) > 0
+    assert len(result.api_costs) == len(result.usage_volumes)
