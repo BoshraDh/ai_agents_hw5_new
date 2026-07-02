@@ -1,7 +1,7 @@
 [project]
 name = "local-llm-bench"
 version = "1.00"
-description = "Benchmark suite comparing baseline, AirLLM, and quantized local LLM inference (AI Agents course, Assignment 5, group uoh-rl07)"
+description = "Benchmark suite comparing baseline, AirLLM, and quantized local LLM inference (AI Agents course, Assignment 5, group bb-ai-12)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
