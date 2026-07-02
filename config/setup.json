@@ -14,7 +14,12 @@
     "assets_dir": "assets",
     "assumed_tdp_watts": 28.0,
     "ollama_tag": "phi3:medium",
-    "_ollama_tag_note": "The Ollama library tag does not derive from the Hugging Face repo name (e.g. 'phi-3-medium-4k-instruct' is NOT a valid Ollama tag) - it must be looked up and set explicitly. Confirmed via 'ollama pull phi3:medium' during Phase 4."
+    "_ollama_tag_note": "The Ollama library tag does not derive from the Hugging Face repo name (e.g. 'phi-3-medium-4k-instruct' is NOT a valid Ollama tag) - it must be looked up and set explicitly. Confirmed via 'ollama pull phi3:medium' during Phase 4.",
+    "quant_ollama_tags": {
+      "Q4_0": "phi3:medium",
+      "Q2_K": "phi3:14b-medium-4k-instruct-q2_K"
+    },
+    "_quant_ollama_tags_note": "Each quant level maps to a distinct Ollama library tag -- 'phi3:medium' resolves to Q4_0 by default, it is NOT re-quantized per quant_level. Q2_K requires the explicit tag above (confirmed pullable via 'ollama pull phi3:14b-medium-4k-instruct-q2_K' during Phase 4)."
   },
   "airllm": {
     "layer_shards_saving_path": "data/airllm_cache"

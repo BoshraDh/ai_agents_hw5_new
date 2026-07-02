@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Callable
+from collections.abc import Callable
 
 
 class StreamingTimingMixin:
@@ -38,7 +38,7 @@ class StreamingTimingMixin:
 
         ttft = token_timestamps[0] - start
         if len(token_timestamps) > 1:
-            gaps = [b - a for a, b in zip(token_timestamps, token_timestamps[1:])]
+            gaps = [b - a for a, b in zip(token_timestamps, token_timestamps[1:], strict=False)]
             tpot = sum(gaps) / len(gaps)
         else:
             tpot = 0.0

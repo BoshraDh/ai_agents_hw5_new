@@ -49,11 +49,12 @@ class LocalLLMBenchSDK(HardwareProbeMixin):
 
     def run_quantized(self, prompt: str, quant_level: str, max_new_tokens: int) -> RunMetrics:
         settings = self._config.get_benchmark_settings()
-        return self._quantization.run(settings.ollama_tag, quant_level, prompt, max_new_tokens)
+        tag = settings.quant_ollama_tags.get(quant_level, settings.ollama_tag)
+        return self._quantization.run(tag, quant_level, prompt, max_new_tokens)
 
     def run_full_benchmark_suite(self) -> Path:
         settings = self._config.get_benchmark_settings()
-        experiment = ExperimentConfig(settings=settings, ollama_model_tag=settings.ollama_tag)
+        experiment = ExperimentConfig(settings=settings)
         return self._benchmark.run_full_suite(experiment)
 
     def generate_report(self, results_path: Path) -> Path:

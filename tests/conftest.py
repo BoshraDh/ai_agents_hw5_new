@@ -97,7 +97,7 @@ def sample_economic_assumptions() -> dict:
 @pytest.fixture
 def project_root(
     tmp_path: Path, sample_setup_config: dict, sample_rate_limits_config: dict,
-    sample_economic_assumptions: dict,
+    sample_economic_assumptions: dict, monkeypatch,
 ) -> Path:
     config_dir = tmp_path / "config"
     config_dir.mkdir()
@@ -106,6 +106,12 @@ def project_root(
     (config_dir / "economic_assumptions.json").write_text(
         json.dumps(sample_economic_assumptions), encoding="utf-8",
     )
+    # results_dir/assets_dir in setup.json are relative paths, resolved against the
+    # process cwd by BenchmarkService/ReportService -- without this chdir, tests using
+    # this fixture would silently write their fake results into the real project's
+    # results/ directory instead of the sandbox (this exact bug happened and polluted
+    # results/ with run_*.json files from test_full_suite_mocked.py).
+    monkeypatch.chdir(tmp_path)
     return tmp_path
 
 

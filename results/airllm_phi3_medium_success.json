@@ -3,6 +3,7 @@
   "method": "airllm",
   "model_name": "microsoft/Phi-3-medium-4k-instruct",
   "model_params_billion": 14,
+  "precision_or_quant": "fp32",
   "device": "cpu",
   "prompt": "Explain in one short sentence what virtual memory is.",
   "prompt_tokens": 11,

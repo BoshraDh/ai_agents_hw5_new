@@ -70,7 +70,8 @@ class CostAnalysisService:
         ]
 
         breakeven_volume = next(
-            (v for v, api, onprem in zip(volumes, api_costs, onprem_costs) if onprem <= api), None,
+            (v for v, api, onprem in zip(volumes, api_costs, onprem_costs, strict=True) if onprem <= api),
+            None,
         )
 
         return BreakevenResult(

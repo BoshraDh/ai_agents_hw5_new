@@ -5,6 +5,10 @@
 ל-shards של AirLLM (ADR-5), `CostAnalysisService` לניתוח כלכלי חובה (ר' סעיף 2
 וסעיף 5), ו-Model Roofline diagram כהרחבה מקורית (ADR-6).
 
+**עדכון (גרסה 1.02, לאחר Phase 4):** שני באגים אמיתיים נמצאו ותוקנו בעת ההרצה
+בפועל: מיפוי רמת-קוונטיזציה→טג Ollama חסר (ADR-7), ותאימות `ReportService` לפורמט
+ראיות מעורב + matplotlib backend (ADR-8).
+
 ## 1. סקירת שכבות (Context/Container)
 
 ```
@@ -177,6 +181,38 @@ from_pretrained(model_name, layer_shards_saving_path=...)`.
 ישירות על שאלת המחקר הראשונה (`ex05` §4), ו-(ג) לא דורש ניסוי/הורדה נוספים —
 רק חישוב ו-`ReportService.plot_model_roofline()` נוסף. מתועד גם ב-
 `docs/PRD_benchmark_reporting.md`.
+
+### ADR-7: מיפוי מפורש רמת-קוונטיזציה→טג Ollama (`quant_ollama_tags`)
+
+**הקשר:** בהרצה הראשונה של רמת קוונטיזציה שנייה (Q2_K) התגלה שקוד ה-SDK
+(`run_quantized`, `BenchmarkService.run_full_suite`) העביר תמיד את אותו
+`settings.ollama_tag` הבודד ל-`QuantizationService.run`, בלי קשר לרמת
+הקוונטיזציה המבוקשת בפועל — כלומר בקשה ל-Q2_K הייתה בפועל מריצה מחדש את
+Q4_0 (הטג "phi3:medium" ברירת המחדל) ומתייגת את התוצאה בטעות כ-Q2_K.
+
+**החלטה:** נוסף `quant_ollama_tags: dict[str, str]` ל-`config/setup.json`
+(מיפוי מפורש `"Q4_0": "phi3:medium"`, `"Q2_K": "phi3:14b-medium-4k-instruct-q2_K"`)
+ול-`BenchmarkSettings`. `sdk.run_quantized`/`BenchmarkService.run_full_suite`
+מבצעים `settings.quant_ollama_tags.get(quant_level, settings.ollama_tag)` לפני
+הקריאה ל-`QuantizationService`. תואם את עקרון "כל תצורה דרך config, לא בקוד".
+
+### ADR-8: `ReportService` — תאימות לפורמט ראיות מעורב + backend headless
+
+**הקשר:** שני באגים אמיתיים נמצאו כשהופעל `ReportService` לראשונה בפועל מול
+תוצאות אמיתיות (Phase 4): (א) `load_results` ציפה שכל קובץ `results/*.json`
+יכיל רשימת רשומות (`list[dict]`), אך קובצי ראיה שנשמרו ידנית הם אובייקט בודד,
+וקובץ `economic_analysis.json` הוא סכמה שונה לגמרי (לא RunMetrics כלל) — שני
+המקרים קרסו את הטעינה. (ב) `plot_model_roofline` נפל בטעות `NaN or x` (ערך
+`NaN` הוא truthy בפייתון, כך ש-`row.get("precision_or_quant") or row.get(...)`
+מחזיר את ה-`NaN` עצמו במקום ליפול לשדה החלופי כשהערך הראשון חסר).
+
+**החלטה:** `load_results` מקבל כעת גם רשימה וגם אובייקט בודד לכל קובץ, ומסנן
+רשומות שאין בהן `"method"` וגם `"succeeded"` (כלומר אינן RunMetrics-shaped).
+`plot_model_roofline` בודק `pd.isna(...)` במפורש לפני נפילה-חזרה. בנוסף,
+`matplotlib.use("Agg")` נקבע במפורש בראש `report_service.py` — ה-backend
+האינטראקטיבי (TkAgg) ברירת המחדל קרס עם `TclError` כי התקנת ה-Python של `uv`
+בסביבה הזו הייתה חסרה קבצי `tk.tcl`; `Agg` (headless) גם ממילא מתאים יותר
+לשירות ששומר גרפים לקובץ ואינו מציג אותם אינטראקטיבית.
 
 ## 6. תרשים תהליך הרצת benchmark מלא (זרימה)
 

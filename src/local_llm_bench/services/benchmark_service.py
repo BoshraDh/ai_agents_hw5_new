@@ -20,7 +20,6 @@ from local_llm_bench.shared.metrics import RunMetrics
 @dataclass
 class ExperimentConfig:
     settings: BenchmarkSettings
-    ollama_model_tag: str
 
 
 class BenchmarkService:
@@ -49,10 +48,9 @@ class BenchmarkService:
                     self._airllm.run(settings.model_name, settings.precision, prompt, max_tokens)
                 )
                 for quant_level in settings.quant_levels:
+                    tag = settings.quant_ollama_tags.get(quant_level, settings.ollama_tag)
                     results.append(
-                        self._quantization.run(
-                            experiment.ollama_model_tag, quant_level, prompt, max_tokens
-                        )
+                        self._quantization.run(tag, quant_level, prompt, max_tokens)
                     )
 
         return self._save_results(results, Path(settings.results_dir))

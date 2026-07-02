@@ -30,6 +30,7 @@ class BenchmarkSettings:
     assumed_tdp_watts: float
     airllm_layer_shards_saving_path: str
     ollama_tag: str
+    quant_ollama_tags: dict[str, str]
 
 
 class ConfigManager:
@@ -67,6 +68,7 @@ class ConfigManager:
                 "layer_shards_saving_path", "data/airllm_cache"
             ),
             ollama_tag=b["ollama_tag"],
+            quant_ollama_tags=b.get("quant_ollama_tags", {}),
         )
 
     def get_economic_assumptions(self) -> dict:

@@ -3,7 +3,11 @@ from __future__ import annotations
 
 import time
 
-from local_llm_bench.constants import DEFAULT_ASSUMED_TDP_WATTS, SECONDS_PER_HOUR, SUPPORTED_QUANT_LEVELS
+from local_llm_bench.constants import (
+    DEFAULT_ASSUMED_TDP_WATTS,
+    SECONDS_PER_HOUR,
+    SUPPORTED_QUANT_LEVELS,
+)
 from local_llm_bench.shared.gatekeeper import ApiGatekeeper
 from local_llm_bench.shared.metrics import BaseMetricsCollectorMixin, RunMetrics
 

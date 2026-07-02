@@ -40,7 +40,12 @@ def test_ram_sampling_external_process_matches_current_process_by_name():
     collector = _Collector()
     collector._external_sample_interval_sec = 0.01
     collector._start_ram_sampling(process_name_filter=name_fragment)
-    time.sleep(0.05)
+    # A single psutil.process_iter() pass over every OS process can take well over a
+    # second on a machine with hundreds of running processes (measured ~1.4s on this
+    # dev box) -- poll instead of a fixed short sleep to avoid flakiness across machines.
+    deadline = time.monotonic() + 10.0
+    while collector._peak_rss_mb == 0.0 and time.monotonic() < deadline:
+        time.sleep(0.1)
     peak = collector._stop_ram_sampling()
     assert peak > 0
 

@@ -96,5 +96,8 @@ class BaseMetricsCollectorMixin:
 
     def _stop_ram_sampling(self) -> float:
         self._sampling = False
-        self._sampler_thread.join(timeout=1.0)
+        # A single external process_iter() pass can exceed 1s on a busy machine (see
+        # tests/unit/test_metrics.py) -- use a generous timeout so we don't return before
+        # the in-flight sample finishes.
+        self._sampler_thread.join(timeout=3.0)
         return self._peak_rss_mb

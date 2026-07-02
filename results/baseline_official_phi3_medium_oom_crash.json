@@ -1,0 +1,21 @@
+{
+  "purpose": "Official baseline (ex05 section 5.2) run through ModelLoaderService itself (direct Hugging Face transformers .from_pretrained + .generate(), not Ollama) -- the exact code path/metrics used for baseline vs AirLLM comparison elsewhere in this project.",
+  "method": "baseline",
+  "model_name": "microsoft/Phi-3-medium-4k-instruct",
+  "model_params_billion": 14.0,
+  "precision_or_quant": "fp32",
+  "prompt": "Explain how virtual memory works in one paragraph.",
+  "max_new_tokens": 64,
+  "succeeded": false,
+  "invocation": "uv run python -m local_llm_bench.main --mode baseline --max-new-tokens 64",
+  "process_exit_code": 139,
+  "os_signal": "SIGSEGV (Segmentation fault)",
+  "total_wall_time_sec": 17.3,
+  "system_ram_gb_at_time_of_failure": 7.65,
+  "system_ram_free_gb_before_run": 1.56,
+  "estimated_required_ram_gb_fp32": 56.0,
+  "error": "Process terminated by the OS with a segmentation fault while AutoModelForCausalLM.from_pretrained() was materializing the fp32 weight tensors -- no Python exception was raised (the OOM killed the process outright before ModelLoaderService's own try/except could catch anything or write a result).",
+  "root_cause": "Loading a 14B-parameter model at fp32 (4 bytes/param) requires ~56GB of RAM just for the weights, on a machine with 7.65GB of total RAM. Unlike the Ollama qwen2.5:72b failure (results/ollama_qwen72b_fail_evidence.json), which failed gracefully inside llama-server with a catchable allocation error, the raw transformers .from_pretrained() path has no such guard: the OS itself kills the process (segfault / exit 139) once the allocator's memory pressure crosses the kernel's limit.",
+  "analysis": "Reproduced twice (17.3s and a prior unmeasured run, both segfault). This is the 'official' non-Ollama baseline the assignment requires (section 5.2): the same model, same prompt, through the project's own ModelLoaderService/RunMetrics code path used for the AirLLM and quantized runs. Confirms research question #1 (memory-bound, not compute-bound -- failure happens during weight materialization, before any Prefill/Decode) via a second, independent execution path from the Ollama evidence, and demonstrates why AirLLM's layer-by-layer streaming (results/airllm_phi3_medium_success.json) is necessary rather than optional for this hardware.",
+  "timestamp": "2026-07-02"
+}

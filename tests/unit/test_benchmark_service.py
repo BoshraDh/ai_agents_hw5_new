@@ -27,11 +27,13 @@ def test_run_full_suite_saves_expected_number_of_records(tmp_path: Path):
         model_name="fake/model", fallback_model_name="fake/small", precision="fp32",
         max_new_tokens_options=[16, 32], prompts=["p1", "p2"], quant_levels=["Q4_K_M"],
         results_dir=str(tmp_path / "results"), assets_dir=str(tmp_path / "assets"),
+        assumed_tdp_watts=28.0, airllm_layer_shards_saving_path=str(tmp_path / "shards"),
+        ollama_tag="fake-model", quant_ollama_tags={"Q4_K_M": "fake-model"},
     )
     baseline, airllm, quantized = _FakeService("baseline"), _FakeService("airllm"), _FakeService("quantized")
     service = BenchmarkService(baseline, airllm, quantized)
 
-    out_path = service.run_full_suite(ExperimentConfig(settings=settings, ollama_model_tag="fake-model"))
+    out_path = service.run_full_suite(ExperimentConfig(settings=settings))
 
     assert out_path.exists()
     records = json.loads(out_path.read_text(encoding="utf-8"))

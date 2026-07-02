@@ -8,6 +8,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import matplotlib
+
+# This service only ever saves charts to disk; force the non-interactive Agg backend
+# so it works headless/in CI and doesn't depend on a working Tk install (this Windows
+# uv-managed Python was missing tk.tcl, which crashed the default TkAgg backend).
+matplotlib.use("Agg")
+
 from local_llm_bench.services.cost_analysis_service import BreakevenResult
 
 _BYTES_PER_PARAM_BY_PRECISION = {"fp32": 4.0, "fp16": 2.0, "bf16": 2.0, "Q4_K_M": 0.5, "Q2_K": 0.25}
@@ -20,7 +27,16 @@ class ReportService:
         self._assets_dir = assets_dir
 
     def load_results(self, results_path: Path):
-        """Public loader — reused by generate() and by SDK.generate_model_roofline()."""
+        """Public loader — reused by generate() and by SDK.generate_model_roofline().
+
+        Accepts both the list-of-RunMetrics format written by BenchmarkService and the
+        single-object evidence files saved by hand during Phase 4 (e.g.
+        results/airllm_phi3_medium_success.json), which carry one RunMetrics-shaped dict
+        plus extra descriptive fields (purpose, root_cause, ...). results_path may also
+        contain non-experiment artifacts (e.g. economic_analysis.json, which has its own
+        unrelated schema) -- these are skipped rather than corrupting the comparison table,
+        since they lack the "method"/"succeeded" fields every RunMetrics record has.
+        """
         import pandas as pd
 
         if not results_path.exists() or not any(results_path.glob("*.json")):
@@ -28,7 +44,12 @@ class ReportService:
         records = []
         for file in sorted(results_path.glob("*.json")):
             with open(file, encoding="utf-8") as f:
-                records.extend(json.load(f))
+                parsed = json.load(f)
+            for record in parsed if isinstance(parsed, list) else [parsed]:
+                if "method" in record and "succeeded" in record:
+                    records.append(record)
+        if not records:
+            raise FileNotFoundError(f"No RunMetrics-shaped result records found under {results_path}")
         return pd.DataFrame.from_records(records)
 
     def generate(self, results_path: Path) -> Path:
@@ -100,27 +121,36 @@ class ReportService:
         plt.close(fig)
         return out_path
 
-    def plot_model_roofline(self, df, model_params_billion: float, roofline_assumptions: dict) -> Path:
-        """Original extension (PLAN.md ADR-6): illustrates whether each method operates in a
-        compute-bound or memory-bound regime. Ceiling values are ASSUMED (config-driven), not
-        vendor-measured — documented explicitly in docs/PRD_benchmark_reporting.md."""
+    def _build_roofline_figure(self, df, model_params_billion: float, roofline_assumptions: dict):
+        """Builds the Model Roofline figure/axes without saving -- split out from
+        plot_model_roofline so tests can inspect legend content directly."""
         import matplotlib.pyplot as plt
         import numpy as np
+        import pandas as pd
 
         peak_gflops = roofline_assumptions["assumed_peak_gflops"]
         bandwidth_gbps = roofline_assumptions["assumed_memory_bandwidth_gbps"]
 
-        self._assets_dir.mkdir(parents=True, exist_ok=True)
         fig, ax = plt.subplots(figsize=(6, 5), dpi=150)
         intensities = np.logspace(-2, 3, 200)
         ax.plot(intensities, np.minimum(bandwidth_gbps * intensities, peak_gflops),
                 color="black", linestyle="--", label="Roofline ceiling (assumed)")
 
         for _, row in df[df["succeeded"]].iterrows():
-            bytes_per_param = _BYTES_PER_PARAM_BY_PRECISION.get(row["precision_or_quant"], 4.0)
+            # Some hand-saved Phase 4 evidence files predate the precision_or_quant field
+            # (or use "quantization_level" instead) -- fall back rather than KeyError, and
+            # be honest in the legend about which value (if any) was actually available.
+            # (NaN is truthy in Python, so `x or y` would return a NaN instead of falling
+            # through to y -- must check for real missing values with pd.isna explicitly.)
+            precision_label = row.get("precision_or_quant")
+            if pd.isna(precision_label):
+                precision_label = row.get("quantization_level")
+            if not isinstance(precision_label, str) or not precision_label:
+                precision_label = "unknown"
+            bytes_per_param = _BYTES_PER_PARAM_BY_PRECISION.get(precision_label, 4.0)
             intensity = 2.0 / bytes_per_param
             achieved_gflops = row["tokens_per_sec"] * 2 * model_params_billion
-            ax.scatter(intensity, achieved_gflops, label=f"{row['method']} ({row['precision_or_quant']})")
+            ax.scatter(intensity, achieved_gflops, label=f"{row['method']} ({precision_label})")
 
         ax.set_xscale("log")
         ax.set_yscale("log")
@@ -129,6 +159,16 @@ class ReportService:
         ax.set_title("Model Roofline (illustrative, assumption-based)")
         ax.legend(fontsize=7)
         fig.tight_layout()
+        return fig, ax
+
+    def plot_model_roofline(self, df, model_params_billion: float, roofline_assumptions: dict) -> Path:
+        """Original extension (PLAN.md ADR-6): illustrates whether each method operates in a
+        compute-bound or memory-bound regime. Ceiling values are ASSUMED (config-driven), not
+        vendor-measured — documented explicitly in docs/PRD_benchmark_reporting.md."""
+        import matplotlib.pyplot as plt
+
+        self._assets_dir.mkdir(parents=True, exist_ok=True)
+        fig, _ax = self._build_roofline_figure(df, model_params_billion, roofline_assumptions)
         out_path = self._assets_dir / "model_roofline.png"
         fig.savefig(out_path)
         plt.close(fig)
