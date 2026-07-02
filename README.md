@@ -31,8 +31,9 @@
 
 **נימוק בחירת המודל** (`microsoft/Phi-3-medium-4k-instruct`, ~14B, MIT, לא-gated):
 ר' `docs/PRD.md` §1.2 ו-`docs/PLAN.md` ADR-1 — עם ~7.65GB RAM בלבד, המודל (~14GB
-ב-FP16, ~28GB ב-FP32) פשוט לא ייכנס לזיכרון — Baseline צפוי להיכשל בבירור בטעינה,
-בעוד AirLLM (שכבה אחת בזיכרון בכל רגע) צפוי להצליח.
+ב-FP16, ~28GB ב-FP32) פשוט לא נכנס לזיכרון. **זה בדיוק מה שקרה בפועל, לא רק
+תחזית**: Baseline נכשל בפועל בשתי דרכים עצמאיות (ניסוי 2, ניסוי 3 למטה), בעוד
+AirLLM (שכבה אחת בזיכרון בכל רגע) הצליח בפועל (ניסוי 4).
 
 ## שאלות המחקר (נענות במלואן להלן)
 
@@ -215,7 +216,11 @@ Ollama (Q4_0, 7.9GB; Q2_K, 5.14GB — במקום ~28GB במקור) ולאתר א
    חיצוני לפי שם, במקום את עצמו) — אומת ידנית מול Task Manager (`llama-server.exe`
    הגיע ל-3.76GB בזמן הריצה) לפני שהמדידה האוטומטית תוקנה ואושרה.
 
-```json
+```
+$ ollama serve   # תהליך daemon רץ ברקע על localhost:11434
+$ uv run python -m local_llm_bench.main --mode quantized --quant-level Q4_0 \
+  --prompt "Explain in one short sentence what virtual memory is." --max-new-tokens 30
+
 {
   "model": "phi3:medium (Q4_0, 7.9GB)",
   "succeeded": true,
@@ -231,9 +236,16 @@ Ollama (Q4_0, 7.9GB; Q2_K, 5.14GB — במקום ~28GB במקור) ולאתר א
 }
 ```
 
+ראיה גולמית: `results/quantized_phi3_medium_q4_0.json`.
+
 **עכשיו הרמה השנייה — Q2_K (5.14GB, עוד יותר אגרסיבית):**
 
-```json
+```
+$ uv run python -m local_llm_bench.main --mode quantized --quant-level Q2_K \
+  --prompt "Explain in one short sentence what virtual memory is." --max-new-tokens 64
+# Ollama מוריד קודם את המשקלות (5.14GB, "pulling manifest" -> "pulling <digest>" -> 100%)
+# ואז מריץ בפועל דרך llama-server.exe המקומי
+
 {
   "model": "phi3:14b-medium-4k-instruct-q2_K (Q2_K, 5.14GB)",
   "succeeded": true,
