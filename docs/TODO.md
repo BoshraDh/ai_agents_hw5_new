@@ -95,12 +95,14 @@ Model Roofline), ו-Phase 4 עודכן לכלול בדיקת עשן, שאלות 
 - [x] **בדיקת עשן (ex05 §6.1 "Do")**: `phi3:mini` דרך Ollama רץ בהצלחה —
       total 24.95s (load 19.26s), TTFT 1.77s, TPOT ~0.153s/token (~6.8 tok/sec).
       תוצאה נשמרה ב-`results/ollama_smoke_test_phi3_mini.json`. הצנרת עובדת.
-- [ ] **מודל גדול מדי ל-Ollama, אך עובד ב-AirLLM** (לפי בקשת המשתמשת): הורדת מודל
-      גדול (למשל Qwen2.5-72B-Instruct) דרך Ollama, הרצה + תיעוד כשל/איטיות
-      בלתי-נסבלת (screenshot/log) — **ממתין לאישור מפורש** (הורדה ~47GB, זמן ריצה
-      ארוך)
-- [ ] אותו מודל גדול, הפעם דרך AirLLM (Hugging Face SafeTensors) — הרצה + תיעוד
-      הצלחה עם peak RAM נמוך משמעותית
+- [x] **מודל גדול מדי ל-Ollama** (לפי בקשת המשתמשת): `qwen2.5:72b` (47GB) הורד
+      והורץ — **נכשל תוך 6.28 שניות** ("unable to allocate CPU buffer",
+      ~19.2GB allocation מול ~7.65GB RAM זמין). ראיה: `results/ollama_qwen72b_fail_evidence.json`
+      + תועד ב-README "יומן ניסויים" ניסוי 2.
+- [x] **תיקון קריטי**: התגלה שמדידת ה-RAM המקורית (76GB) הייתה שגויה פי 10 —
+      בפועל ~7.65GB. תוקן ב-PRD/PLAN/README (v1.02).
+- [ ] אותו מודל גדול (או Phi-3-medium), הפעם דרך AirLLM (Hugging Face SafeTensors)
+      — הרצה + תיעוד הצלחה עם peak RAM נמוך משמעותית
 - [ ] הרצת Baseline הרשמי (FP32, Phi-3-medium-4k-instruct) + מדידת TTFT/TPOT/RAM —
       **לתעד בפירוט חי גם אם המודל נכשל/נתקע/איטי מדי** (זו תוצאה לגיטימית)
 - [ ] הרצת AirLLM על Phi-3-medium בדיוק + אותן מדידות (להשוואה כמותית מלאה)

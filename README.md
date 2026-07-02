@@ -16,17 +16,24 @@
 
 ## מפרט חומרה שנבדק
 
+> **⚠ תיקון:** המדידה הראשונית (בתחילת הפרויקט) דיווחה RAM ~76GB — **זו הייתה
+> טעות תמלול פי 10** מפלט `wmic` מקוטע. המספר הנכון, מאומת דרך
+> `Get-CimInstance Win32_OperatingSystem` וגם באופן עקיף דרך כישלון טעינה בפועל
+> של מודל 72B, הוא **~7.65GB**. זה משנה משמעותית את סיפור הניסוי (לטובה — ניגוד
+> חד יותר בין Baseline לבין AirLLM) — ר' פירוט ב"יומן ניסויים" למטה.
+
 | רכיב | ערך |
 |---|---|
 | CPU | Intel Core i7-1165G7, 4 cores / 8 threads |
-| RAM | ~76 GB |
+| **RAM** | **~7.65 GB** (8,211,927,040 בייטים) |
 | GPU | Intel Iris Xe משולב — **ללא CUDA**, אין GPU ייעודי |
-| אחסון | SSD (ככל הנראה NVMe; יאומת בפועל דרך `--mode hardware`) |
-| דיסק פנוי | ~172 GB |
+| אחסון | SSD |
+| דיסק פנוי | ~115 GB (מתוך ~475GB; ירד לאחר הורדת מודלים) |
 
 **נימוק בחירת המודל** (`microsoft/Phi-3-medium-4k-instruct`, ~14B, MIT, לא-gated):
-ר' `docs/PRD.md` §1.2 ו-`docs/PLAN.md` ADR-1 — גדול מספיק כדי ליצור לחץ אמיתי על
-ה-RAM ב-FP32 (~56GB מתוך 76GB), אך לא גדול מדי מכדי ש-AirLLM יוכל להריץ אותו.
+ר' `docs/PRD.md` §1.2 ו-`docs/PLAN.md` ADR-1 — עם ~7.65GB RAM בלבד, המודל (~14GB
+ב-FP16, ~28GB ב-FP32) פשוט לא ייכנס לזיכרון — Baseline צפוי להיכשל בבירור בטעינה,
+בעוד AirLLM (שכבה אחת בזיכרון בכל רגע) צפוי להצליח.
 
 ## שאלות המחקר שהדוח הסופי יענה עליהן
 
@@ -74,9 +81,40 @@ eval_count: 26 tokens          →  TPOT (Decode) ≈ 0.153s/token  (~6.8 tokens
 
 ראיה גולמית: `results/ollama_smoke_test_phi3_mini.json`.
 
-### ⏳ ניסוי 2 — מודל גדול מדי ל-Ollama מול AirLLM (בתהליך)
+### ✅ ניסוי 2 — מודל גדול מדי: `qwen2.5:72b` דרך Ollama (Baseline נכשל)
 
-עדיין לא בוצע — ר' `docs/TODO.md` Phase 4.
+**מטרה:** להדגים "מה קורה כשמנסים להריץ מודל גדול מדי" (ex05 §5.2) עם מודל
+משמעותית מעבר ליכולת החומרה. **תוצאה: כישלון מיידי ומתועד — לא ריצה איטית, אלא
+כישלון טעינה מוחלט.**
+
+```
+$ ollama pull qwen2.5:72b     # 47GB, הצליח להוריד (יש מספיק דיסק)
+$ curl http://localhost:11434/api/generate -d '{"model": "qwen2.5:72b",
+  "prompt": "Explain in one short sentence what virtual memory is.", "stream": false}'
+
+HTTP 500, נכשל אחרי 6.28 שניות בלבד
+
+שגיאה מלאה:
+  "llama-server process has terminated: exit status 1:
+   ggml_backend_cpu_buffer_type_alloc_buffer: failed to allocate buffer of
+   size 19192545280 (~19.2GB)
+   alloc_tensor_range: failed to allocate CPU buffer of size 19192545280
+   error loading model: unable to allocate CPU buffer"
+```
+
+**ניתוח (עונה על שאלת מחקר #1):** צוואר הבקבוק כאן הוא **זיכרון (RAM), לא כוח
+חישוב** — הכישלון קרה תוך 6.28 שניות, לפני שהחל כל חישוב Prefill/Decode ממשי.
+המערכת ניסתה להקצות מאגר יחיד של ~19.2GB, בעוד סך כל ה-RAM הזמין הוא ~7.65GB —
+כישלון הקצאה מיידי וודאי, לא תלוי-עומס. זו בדיוק הדרך שבה מזהים "בפועל, לא
+בהשערות" (ex05 §3) שההגבלה היא memory-bound: השגיאה עצמה מדווחת את גודל ההקצאה
+שנכשלה, לא timeout או האטה הדרגתית.
+
+ראיה גולמית: `results/ollama_qwen72b_fail_evidence.json`.
+
+### ⏳ ניסוי 3 — אותו מודל (Qwen2.5-72B) דרך AirLLM (בתהליך)
+
+הצעד הבא: להריץ את אותו מודל (או את המודל הראשי Phi-3-medium) דרך AirLLM
+ולתעד הצלחה חרף אותו מגבלת ~7.65GB RAM. עדיין לא בוצע.
 
 ## הוראות התקנה
 

@@ -1,0 +1,15 @@
+{
+  "purpose": "Baseline 'too large to run' demonstration (ex05 section 5.2) — a genuinely oversized model against this machine's real ~7.65GB RAM.",
+  "model": "qwen2.5:72b",
+  "model_size_on_disk_gb": 47,
+  "prompt": "Explain in one short sentence what virtual memory is.",
+  "http_status": 500,
+  "total_time_sec": 6.2816,
+  "succeeded": false,
+  "error": "llama-server process has terminated: exit status 1: ggml_backend_cpu_buffer_type_alloc_buffer: failed to allocate buffer of size 19192545280\nalloc_tensor_range: failed to allocate CPU buffer of size 19192545280\nerror loading model: unable to allocate CPU buffer",
+  "failed_allocation_bytes": 19192545280,
+  "failed_allocation_gb": 17.87,
+  "system_ram_gb_at_time_of_failure": 7.65,
+  "analysis": "Failure occurred in ~6 seconds, before any Prefill/Decode computation began — this is a hard memory-allocation failure (memory-bound), not a compute-bound slowdown. Directly answers PRD.md research question #1.",
+  "timestamp": "2026-07-02"
+}
