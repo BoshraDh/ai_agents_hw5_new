@@ -48,6 +48,36 @@ AirLLM וקוונטיזציה) עם טבלאות/גרפים משובצים, סי
 (ההרחבה המקורית), ומענה מפורש לכל שאלות המחקר לעיל — לצד הוראות ההפעלה שכבר קיימות
 למטה.
 
+## יומן ניסויים וממצאים (מתעדכן בזמן אמת לאורך Phase 4)
+
+> הערה על "צילומי מסך": אני (סוכן ה-AI) מריץ פקודות בטרמינל ולא יכול לצלם מסך
+> אמיתי. הראיה בפועל היא פלט טרמינל מלא ומדויק, נשמר גם כקובץ JSON תחת `results/`
+> וגם מצוטט כאן. אם תרצי צילומי מסך גרפיים ממש להגשה הרשמית, אפשר לצלם בעצמך את
+> הפלטים המתועדים כאן.
+
+### ✅ ניסוי 1 — בדיקת עשן: `phi3:mini` דרך Ollama (ex05 §6.1 "Do")
+
+**מטרה:** לוודא שהצנרת (Ollama מותקן ורץ + קריאת API) עובדת קצה-לקצה לפני מעבר
+למודל הגדול. **תוצאה: הצלחה מלאה.**
+
+```
+$ curl http://localhost:11434/api/generate -d '{"model": "phi3:mini",
+  "prompt": "Explain in one short sentence what virtual memory is.", "stream": false}'
+
+תשובת המודל: "Virtual memory is a computer's, in reality, uses hard disk space
+              to simulate additional RAM when physical RAM is insufficient."
+
+total_duration:  24.95s  (load_duration: 19.26s)
+prompt_eval_count: 20 tokens   →  TTFT (Prefill) ≈ 1.77s
+eval_count: 26 tokens          →  TPOT (Decode) ≈ 0.153s/token  (~6.8 tokens/sec)
+```
+
+ראיה גולמית: `results/ollama_smoke_test_phi3_mini.json`.
+
+### ⏳ ניסוי 2 — מודל גדול מדי ל-Ollama מול AirLLM (בתהליך)
+
+עדיין לא בוצע — ר' `docs/TODO.md` Phase 4.
+
 ## הוראות התקנה
 
 דרישות: Python 3.10+, [`uv`](https://docs.astral.sh/uv/) מותקן, ו-(לניסוי הקוונטיזציה)
