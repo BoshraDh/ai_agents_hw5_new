@@ -26,8 +26,17 @@
   של Ollama **כבר כוללת** `prompt_eval_duration` (ננושניות — משמש כ-TTFT/Prefill
   proxy) ו-`eval_duration`/`eval_count` (ממוצע = TPOT/Decode proxy). השירות מחלץ
   את השדות הללו ישירות מהתשובה, ללא צורך במדידה עצמאית.
-- כל תקשורת עם Ollama (`ollama pull`, קריאת API על `localhost:11434`) עוברת דרך
-  `ApiGatekeeper` — כולל retry אם השירות המקומי עדיין לא עלה (`ollama serve`).
+- כל תקשורת עם Ollama עוברת דרך `ApiGatekeeper`, כולל **הורדת המודל עצמה** —
+  דרך `POST /api/pull` (HTTP), **לא** `subprocess.run(["ollama", "pull", ...])`.
+  **אומת בפועל (Phase 4)**: קריאת subprocess נכשלה עם
+  `"[WinError 2] The system cannot find the file specified"` כי `ollama` לא היה
+  ב-PATH של תהליך הפייתון (גם כשההתקנה עצמה תקינה ופועלת). המעבר ל-API HTTP
+  מבטל את התלות ב-PATH לגמרי ומתאים יותר לארכיטקטורת ה-Gatekeeper ממילא (קריאת
+  רשת אחידה, לא ערבוב subprocess+HTTP). כולל retry אם השירות המקומי עדיין לא עלה.
+- **אומת בפועל (Phase 4) — תקלת מדידה קריטית**: peak RAM נמדד בטעות מול תהליך
+  הפייתון שלנו (~36MB, שגוי) במקום מול `llama-server.exe` — התהליך שבו Ollama
+  בפועל מריץ את המודל (נמדד ~4GB בפועל). תוקן ב-`shared/metrics.py` דרך תמיכה
+  ב-`process_name_filter` (ר' `docs/PLAN.md` ADR-3).
 - השירות **לא** מתקין/מפעיל את Ollama בעצמו — בודק זמינות (`GET /api/tags`) ומחזיר
   שגיאה ברורה עם הוראת התקנה אם לא זמין (fail fast, לא side-effect מוסתר).
 

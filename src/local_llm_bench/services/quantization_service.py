@@ -1,7 +1,6 @@
 """Quantized execution via a local Ollama daemon (GGUF weights, e.g. Q4_K_M / Q2_K)."""
 from __future__ import annotations
 
-import subprocess
 import time
 
 from local_llm_bench.constants import DEFAULT_ASSUMED_TDP_WATTS, SECONDS_PER_HOUR, SUPPORTED_QUANT_LEVELS
@@ -40,13 +39,23 @@ class QuantizationService(BaseMetricsCollectorMixin):
         if quant_level not in SUPPORTED_QUANT_LEVELS:
             raise ValueError(f"Unsupported quant level: {quant_level}")
 
-        self._start_ram_sampling()
+        # Ollama runs the model in a separate OS process ("llama-server" on this platform;
+        # may differ on Linux/macOS builds), not in-process — sample that process's RSS,
+        # not ours (see BaseMetricsCollectorMixin docstring for why this matters).
+        self._start_ram_sampling(process_name_filter="llama-server")
         wall_start = time.monotonic()
         try:
             self._ensure_available()
             load_start = time.monotonic()
+            # Use Ollama's HTTP /api/pull instead of shelling out to the CLI: avoids any
+            # dependency on 'ollama' being resolvable on PATH (observed failure in
+            # practice: "[WinError 2] The system cannot find the file specified" when
+            # the Ollama install directory wasn't on the calling process's PATH).
             self._gatekeeper.execute(
-                lambda: subprocess.run(["ollama", "pull", ollama_model_tag], check=True, timeout=1800),
+                lambda: requests.post(
+                    f"{self._host}/api/pull", json={"model": ollama_model_tag, "stream": False},
+                    timeout=1800,
+                ).raise_for_status(),
                 description=f"ollama pull {ollama_model_tag}",
             )
             load_time = time.monotonic() - load_start

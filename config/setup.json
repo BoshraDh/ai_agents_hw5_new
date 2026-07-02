@@ -9,10 +9,12 @@
       "Explain how virtual memory works in one paragraph.",
       "Summarize the difference between CPU and GPU architectures in two sentences."
     ],
-    "quant_levels": ["Q4_K_M", "Q2_K"],
+    "quant_levels": ["Q4_0", "Q2_K"],
     "results_dir": "results",
     "assets_dir": "assets",
-    "assumed_tdp_watts": 28.0
+    "assumed_tdp_watts": 28.0,
+    "ollama_tag": "phi3:medium",
+    "_ollama_tag_note": "The Ollama library tag does not derive from the Hugging Face repo name (e.g. 'phi-3-medium-4k-instruct' is NOT a valid Ollama tag) - it must be looked up and set explicitly. Confirmed via 'ollama pull phi3:medium' during Phase 4."
   },
   "airllm": {
     "layer_shards_saving_path": "data/airllm_cache"

@@ -113,8 +113,19 @@ Model Roofline), ו-Phase 4 עודכן לכלול בדיקת עשן, שאלות 
 - [ ] הרצת Baseline הרשמי דרך `ModelLoaderService` (HF transformers ישיר, לא
       Ollama) על Phi-3-medium — לתיעוד כמותי מלא מול AirLLM עם אותו קוד/מדדים
       בדיוק (במקום ההשוואה הנוכחית שמערבבת Ollama-baseline מול AirLLM-Phi3)
-- [ ] `ollama pull` למודל/גרסה קוונטזית מקבילה (Phi-3-medium), הרצה בלפחות 2
-      רמות קוונטיזציה (למשל Q4_K_M, Q2_K) + הערכת איכות פלט איכותנית
+- [x] **קוונטיזציה: `phi3:medium` (Q4_0) דרך Ollama — הצלחה.** שתי תקלות נוספות
+      נמצאו ותוקנו: (1) `ollama_tag` לא ניתן לגזירה מ-HF repo name → נוסף מפורש
+      ל-`config/setup.json`; (2) `subprocess.run(["ollama","pull"])` נכשל
+      (WinError 2, PATH) → הוחלף ב-`POST /api/pull`. **תקלת מדידה קריטית
+      שלישית**: peak RAM נמדד בטעות מול תהליך הפייתון (36MB) במקום מול
+      `llama-server.exe` (תהליך המודל בפועל, ~4GB) — תוקן ב-
+      `BaseMetricsCollectorMixin` (`process_name_filter`, ר' PLAN.md ADR-3
+      מעודכן). תוצאה סופית: peak RAM 3984.6MB, TTFT 29.1s, TPOT 18.7s/token,
+      tokens/sec 0.052, ~9.8 דקות. ראיה: `results/quantized_phi3_medium_q4_0.json`.
+      תועד ב-README ניסוי 4 עם טבלת השוואה תלת-כיוונית (Baseline/AirLLM/Quantized).
+- [ ] רמת קוונטיזציה נוספת (Q2_K או דומה) להשלמת ההשוואה בין רמות קוונטיזציה
+      (ex05 §5.3 מבקש "לפחות רמת קוונטיזציה אחת ומה הייתה ההשפעה" — כבר מכוסה
+      חלקית; רמה שנייה תעשיר את הניתוח אך אינה חובה מוחלטת)
 - [ ] הרצת `run_full_benchmark_suite` (ניתוח רגישות: אורכי פרומפט/טוקנים, OAT)
 - [ ] הרצת `generate_report` → טבלה + גרפי peak RAM, tokens/sec, **Model Roofline**
 - [ ] הרצת `run_economic_analysis` → גרף נקודת-איזון (break-even) + המלצה מנומקת

@@ -1,0 +1,28 @@
+{
+  "purpose": "Quantization demonstration (ex05 section 5.3) — same primary model (Phi-3-medium) via Ollama's default Q4_0 GGUF quantization, for direct comparison against AirLLM and the failed oversized baseline.",
+  "method": "quantized",
+  "model_name": "phi3:medium",
+  "ollama_tag": "phi3:medium",
+  "quantization_level": "Q4_0",
+  "model_size_on_disk_gb": 7.9,
+  "model_params_billion": 14.0,
+  "prompt": "Explain in one short sentence what virtual memory is.",
+  "prompt_tokens": 20,
+  "max_new_tokens": 30,
+  "succeeded": true,
+  "generated_text": "Virtual memory allows a computer to compensate for limited physical memory by temporarily transferring data from RAM to disk storage, creating an illusion of a",
+  "load_time_sec": 3.281,
+  "ttft_sec": 29.121,
+  "tpot_sec": 18.728,
+  "tokens_per_sec": 0.052,
+  "peak_ram_mb": 3984.6,
+  "total_wall_time_sec": 585.938,
+  "estimated_power_wh": 4.5573,
+  "measurement_note": "peak_ram_mb correctly measures the 'llama-server.exe' OS process spawned by Ollama to run the model, NOT our own Python client process. Two earlier runs (results not kept) wrongly reported ~36MB because BaseMetricsCollectorMixin originally always sampled the calling process's own RSS -- a real bug found and fixed in src/local_llm_bench/shared/metrics.py (added process_name_filter support) after manually observing llama-server.exe using ~3.6-3.76GB RAM via Task Manager / tasklist during a parallel-monitored run.",
+  "bugs_found_and_fixed_along_the_way": [
+    "config ollama_tag was being derived from the Hugging Face repo name ('phi-3-medium-4k-instruct'), which is not a valid Ollama tag; added explicit 'ollama_tag': 'phi3:medium' to config/setup.json",
+    "QuantizationService used subprocess.run(['ollama','pull',...]) which failed with [WinError 2] because 'ollama' wasn't on the calling process's PATH; switched to Ollama's HTTP POST /api/pull endpoint",
+    "BaseMetricsCollectorMixin always sampled its own process's RAM; added external process-name-based sampling for QuantizationService since Ollama runs the model in a separate OS process"
+  ],
+  "timestamp": "2026-07-02T13:26:46Z"
+}

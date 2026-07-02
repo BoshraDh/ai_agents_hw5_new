@@ -128,7 +128,15 @@ Token — מדד ל-Prefill), **`tpot_sec`** (Time Per Output Token, ממוצע 
 **החלטה:** `BaseMetricsCollectorMixin` מריץ thread נפרד שדוגם `psutil` כל N
 מילישניות לאורך כל ההרצה ושומר את המקסימום — עלות תקורה זניחה, דיוק גבוה משמעותית.
 
-### ADR-4: מדידת TTFT/TPOT אמיתית דרך Streaming (לא קירוב)
+**עדכון (v1.03, אומת בפועל ב-Phase 4)**: ההנחה המקורית ש"מדגמים את התהליך
+הנוכחי" נכונה עבור `ModelLoaderService`/`AirllmService` (טוענים משקלות בתוך
+תהליך הפייתון עצמו) — אך **שגויה לחלוטין** עבור `QuantizationService`: Ollama
+מריץ את המודל בתהליך OS נפרד (`llama-server.exe`), כך שמדידת "עצמנו" תפסה רק
+את לקוח ה-HTTP הקליל (~36MB) ולא את התהליך שבו המודל בפועל (שהגיע ל-~4GB).
+נמצא ותוקן בפועל: `BaseMetricsCollectorMixin._start_ram_sampling` מקבל כעת
+`process_name_filter: str | None` אופציונלי — כשמוגדר, דוגם תהליכי OS חיצוניים
+לפי שם (`psutil.process_iter`) במקום את `psutil.Process()` העצמי.
+`QuantizationService` מעביר `"llama-server"`.
 
 **הקשר:** `ex05` §4-5 דורש במפורש הפרדה בין TTFT (Time To First Token — מודד את
 שלב ה-Prefill) לבין TPOT/ITL (Time Per Output Token — מודד את שלב ה-Decode).

@@ -8,7 +8,7 @@ DEFAULT_RATE_LIMIT_PATH = "config/rate_limits.json"
 
 SUPPORTED_METHODS = ("baseline", "airllm", "quantized")
 SUPPORTED_PRECISIONS = ("fp32", "fp16", "bf16")
-SUPPORTED_QUANT_LEVELS = ("Q4_K_M", "Q2_K")
+SUPPORTED_QUANT_LEVELS = ("Q4_K_M", "Q4_0", "Q2_K")
 
 OLLAMA_DEFAULT_HOST = "http://localhost:11434"
 

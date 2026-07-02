@@ -160,6 +160,67 @@ Decode) בתמורה לזיכרון זעום (903MB, פחות מ-1/30 מגודל
 ראיות גולמיות: `results/airllm_phi3_medium_success.json`,
 `results/airllm_phi3_medium_first_attempt_cuda_error.json`.
 
+### ✅ ניסוי 4 — קוונטיזציה: `phi3:medium` (Q4_0) דרך Ollama
+
+**מטרה:** להריץ את אותו מודל ראשי (Phi-3-medium) בקוונטיזציה סטנדרטית של Ollama
+(Q4_0, 7.9GB במקום ~28GB במקור) ולהשוות לשלוש השיטות. **תוצאה: הצלחה.**
+
+**שתי תקלות אמיתיות נמצאו ותוקנו בדרך** (מעבר לתקלת ה-CUDA בניסוי 3):
+1. שם התג של Ollama לא ניתן לגזירה משם המודל ב-Hugging Face
+   (`phi-3-medium-4k-instruct` ≠ `phi3:medium`) — תוקן דרך הוספת `ollama_tag`
+   מפורש ל-`config/setup.json`.
+2. `subprocess.run(["ollama", "pull", ...])` נכשל עם
+   `"[WinError 2] The system cannot find the file specified"` כי `ollama` לא היה
+   ב-PATH של תהליך הפייתון — תוקן במעבר ל-`POST /api/pull` (HTTP, כמו שאר
+   הקריאות ל-Ollama, ללא תלות ב-PATH בכלל).
+3. **תקלת מדידה חמורה יותר**: המדידה הראשונה של peak RAM דיווחה "36MB" —
+   שגוי לחלוטין! Ollama מריץ את המודל בתהליך OS **נפרד** (`llama-server.exe`),
+   ולא בתוך תהליך הפייתון שלנו. תוקן ב-`shared/metrics.py`
+   (`BaseMetricsCollectorMixin` מקבל כעת `process_name_filter` ודוגם תהליך
+   חיצוני לפי שם, במקום את עצמו) — אומת ידנית מול Task Manager (`llama-server.exe`
+   הגיע ל-3.76GB בזמן הריצה) לפני שהמדידה האוטומטית תוקנה ואושרה.
+
+```json
+{
+  "model": "phi3:medium (Q4_0, 7.9GB)",
+  "succeeded": true,
+  "peak_ram_mb": 3984.6,
+  "ttft_sec": 29.121,
+  "tpot_sec": 18.728,
+  "tokens_per_sec": 0.052,
+  "total_wall_time_sec": 585.938,
+  "generated_text": "Virtual memory allows a computer to compensate for
+                      limited physical memory by temporarily transferring
+                      data from RAM to disk storage, creating an illusion
+                      of a..."
+}
+```
+
+**טבלת השוואה מלאה — שלוש השיטות, אותו מודל בסיסי (Phi-3-medium/משפחתו):**
+
+| מדד | Baseline (qwen2.5:72b, "גדול מדי") | AirLLM (Phi-3-medium, FP-ish) | קוונטיזציה (phi3:medium, Q4_0) |
+|---|---|---|---|
+| הצליח? | ❌ לא | ✅ כן | ✅ כן |
+| גודל מודל בדיסק | 47 GB | ~28 GB | **7.9 GB** |
+| Peak RAM | — (נכשל) | **903 MB** | 3,985 MB |
+| TTFT | — | 79.4s | 29.1s |
+| TPOT | — | 43.1s/token | 18.7s/token |
+| תפוקה | — | 0.023 tok/s | 0.052 tok/s |
+| זמן כולל | 6.3s (כישלון) | ~23 דקות | ~9.8 דקות |
+
+**ניתוח (עונה על שאלת מחקר #3):** הקוונטיזציה מקטינה את המודל פי ~3.5 בדיסק
+(28GB→7.9GB) ומאיצה את הריצה כמעט פי 2 מול AirLLM (TPOT 18.7s מול 43.1s), אך
+**עדיין לא מתקרבת ל"מהירה"** — Ollama עדיין חייב לטעון את כל משקלות המודל
+הקוונטזי (7.9GB) לזיכרון בבת אחת (peak RAM גבוה משמעותית מ-AirLLM: 3,985MB
+מול 903MB), כי בניגוד ל-AirLLM היא **לא** משתמשת בטעינה שכבה-אחר-שכבה — רק
+מקטינה את מספר הביטים לכל משקל. זה בדיוק ה"קו האדום" של הדיוק ש-ex05 שואל
+עליו: Q4_0 עדיין הפיק תשובה קוהרנטית ונכונה לחלוטין (איכות פלט נשמרה), אך
+המחיר של קוונטיזציה לבדה (בלי AirLLM) הוא עדיין peak RAM של כ-4GB — הרבה
+יותר מ-7.65GB ה-RAM שיש לנו בפועל אם היינו רוצים גם עוד תהליכים רצים
+במקביל, אך עדיין בתוך התקציב.
+
+ראיה גולמית: `results/quantized_phi3_medium_q4_0.json`.
+
 ## הוראות התקנה
 
 דרישות: Python 3.10+, [`uv`](https://docs.astral.sh/uv/) מותקן, ו-(לניסוי הקוונטיזציה)

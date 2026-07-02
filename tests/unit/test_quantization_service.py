@@ -26,10 +26,9 @@ def test_run_fails_gracefully_when_ollama_unreachable():
     assert metrics.error is not None
 
 
-@patch("subprocess.run")
 @patch("requests.post")
 @patch("requests.get")
-def test_run_parses_ttft_tpot_from_ollama_native_fields(mock_get, mock_post, mock_subprocess_run):
+def test_run_parses_ttft_tpot_from_ollama_native_fields(mock_get, mock_post):
     mock_get.return_value = MagicMock(raise_for_status=MagicMock())
     mock_post.return_value = MagicMock(json=MagicMock(return_value={
         "response": "generated text", "eval_count": 21, "prompt_eval_count": 5,
