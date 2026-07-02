@@ -9,7 +9,19 @@
 בפועל: מיפוי רמת-קוונטיזציה→טג Ollama חסר (ADR-7), ותאימות `ReportService` לפורמט
 ראיות מעורב + matplotlib backend (ADR-8).
 
-## 1. סקירת שכבות (Context/Container)
+## 1. ארכיטקטורה (מודל C4: Context → Container → Component)
+
+**Level 1 — Context:** מי משתמש במערכת ומה סביבה החיצונית שלה.
+
+```
+[תלמידה/בודק המטלה] --runs--> [Local LLM Bench] --calls--> [Hugging Face Hub]
+                                      |
+                                      +--calls--> [Local Ollama daemon (localhost:11434)]
+```
+
+**Level 2 — Container:** המערכת היא container בודד — תהליך Python מקומי אחד
+(אין שרת, אין DB, אין containers נפרדים; מתאים לאופי הפרויקט כניסוי מקומי,
+לא מוצר מבוזר):
 
 ```
 External Consumers
@@ -20,22 +32,43 @@ External Consumers
               |   LocalLLMBenchSDK      |   <- נקודת כניסה יחידה לכל הלוגיקה
               +-----------+-------------+
                           |
-        +-----------------+------------------+-----------------+
-        v                 v                  v                 v
-  ModelLoaderService  AirllmService  QuantizationService  BenchmarkService
-        |                 |                  |                 |
-        +--------+--------+---------+--------+                 |
-                 v                  v                           v
-           ApiGatekeeper (HF Hub / Ollama)              ReportService
-                 |                                              |
-                 v                                              v
-      Hugging Face Hub / Local Ollama daemon              results/*.json -> graphs
+                          v
+                 [Services container — ר' Level 3 למטה]
+                          |
+                          v
+           ApiGatekeeper (HF Hub / Ollama)
+                          |
+                          v
+      Hugging Face Hub / Local Ollama daemon
 ```
+
+**Level 3 — Component:** פירוט השירותים בתוך ה-container (מפורט בטבלה בסעיף 2
+למטה) — `ModelLoaderService`, `AirllmService`, `QuantizationService`,
+`BenchmarkService`, `ReportService`, `ModelRooflineService`,
+`CostAnalysisService`, כולם דרך `ApiGatekeeper` משותף לקריאות חוצות.
+
+**Level 4 — Code:** ר' סעיף 4 (מודל הנתונים המשותף `RunMetrics`) וסעיף 7 (חוזה
+ה-API הפנימי של `LocalLLMBenchSDK`) למבנה הקוד ברמת המחלקות/הפונקציות.
 
 **עקרון מפתח:** `main.py` וה-notebook אינם מכילים אף שורת לוגיקה עסקית — הם קוראים
 אך ורק למתודות של `LocalLLMBenchSDK`. כל שירות (Service) אחראי על תחום אחד בלבד
 (Single Responsibility). כל קריאה החוצה לרשת (Hugging Face) או לתהליך מקומי אחר
 (Ollama) עוברת אך ורק דרך `ApiGatekeeper`.
+
+### תרשים Deployment
+
+הפריסה טריוויאלית בכוונה — ניסוי מקומי, לא שירות מבוזר: תהליך Python בודד
+(`uv run python -m local_llm_bench.main`) על מחשב יחיד, ללא שרת/ענן/קונטיינר.
+
+```
+[Developer/Student Machine]
+  ├── Python process (uv-managed venv) ── this project's code
+  ├── Ollama daemon process (localhost:11434) ── quantized model serving
+  └── Local filesystem: data/airllm_cache (AirLLM shards), results/, assets/
+        |
+        v (network, download-only)
+  Hugging Face Hub (model weights) + Ollama model registry (GGUF weights)
+```
 
 ## 2. שכבת השירותים (Component)
 
@@ -45,7 +78,8 @@ External Consumers
 | `AirllmService` | טעינה שכבה-אחר-שכבה דרך חבילת `airllm` + generate | model_name, precision, prompt, max_new_tokens | `RunMetrics` |
 | `QuantizationService` | הרצה דרך Ollama (GGUF) ברמות קוונטיזציה שונות | model_name, quant_level, prompt, max_new_tokens | `RunMetrics` |
 | `BenchmarkService` | אורקסטרציה: מריץ קומבינציות (שיטה × פרומפט × אורך) ושומר תוצאות | ניסוי (Experiment config) | קובצי JSON תחת `results/` |
-| `ReportService` | קורא תוצאות שמורות, מפיק גרפים/טבלאות + Model Roofline | נתיב ל-`results/` | קבצי PNG/CSV תחת `assets/` |
+| `ReportService` | קורא תוצאות שמורות, מפיק טבלת השוואה + גרפי peak RAM/tokens-per-sec + break-even | נתיב ל-`results/` | קבצי PNG/CSV תחת `assets/` |
+| `ModelRooflineService` | ההרחבה המקורית (ADR-6): גרף Model Roofline (compute-bound/memory-bound) | DataFrame תוצאות + הנחות roofline | `assets/model_roofline.png` |
 | `CostAnalysisService` | ניתוח כלכלי חובה: עלות API מול On-Prem, נקודת איזון | תוצאות benchmark + `config/economic_assumptions.json` | `BreakevenResult` + גרף |
 
 כל שירות יורש מ-`BaseMetricsCollectorMixin` משותף (ב-`shared/`) שמספק את מדידת
@@ -213,6 +247,21 @@ Q4_0 (הטג "phi3:medium" ברירת המחדל) ומתייגת את התוצא
 האינטראקטיבי (TkAgg) ברירת המחדל קרס עם `TclError` כי התקנת ה-Python של `uv`
 בסביבה הזו הייתה חסרה קבצי `tk.tcl`; `Agg` (headless) גם ממילא מתאים יותר
 לשירות ששומר גרפים לקובץ ואינו מציג אותם אינטראקטיבית.
+
+### ADR-9: פיצול `ReportService`/`ModelRooflineService` (מגבלת 150 שורות)
+
+**הקשר:** לאחר הוספת הבאגים/תיקונים המתועדים ב-ADR-8, `report_service.py` חצה את
+מגבלת ה-150 השורות המחייבת (`software_submission_guidelines-V3.pdf` §3.2) —
+הגיע ל-175 שורות.
+
+**החלטה:** חולץ קובץ נפרד `services/model_roofline_service.py` עם מחלקה ייעודית
+`ModelRooflineService`, הנושאת אך ורק את אחריות ההרחבה המקורית (Model Roofline
+— `_build_roofline_figure`/`plot_model_roofline`). `ReportService` נשאר אחראי על
+טעינת תוצאות (`load_results`, המשותף לשני השירותים) והשוואת peak RAM/tokens-per-
+sec/break-even. לאחר הפיצול: `report_service.py` (120 שורות),
+`model_roofline_service.py` (73 שורות) — שניהם בתוך המגבלה. תואם את עקרון
+Single Responsibility (ADR-2/6) ואת אסטרטגיית "פיצול 50/50" שהנחיות התוכנה
+ממליצות עליה.
 
 ## 6. תרשים תהליך הרצת benchmark מלא (זרימה)
 

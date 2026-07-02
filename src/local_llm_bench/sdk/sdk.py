@@ -11,6 +11,7 @@ from local_llm_bench.services.airllm_service import AirllmService
 from local_llm_bench.services.benchmark_service import BenchmarkService, ExperimentConfig
 from local_llm_bench.services.cost_analysis_service import BreakevenResult, CostAnalysisService
 from local_llm_bench.services.model_loader_service import ModelLoaderService
+from local_llm_bench.services.model_roofline_service import ModelRooflineService
 from local_llm_bench.services.quantization_service import QuantizationService
 from local_llm_bench.services.report_service import ReportService
 from local_llm_bench.shared.config import ConfigManager
@@ -37,6 +38,7 @@ class LocalLLMBenchSDK(HardwareProbeMixin):
         )
         self._benchmark = BenchmarkService(self._model_loader, self._airllm, self._quantization)
         self._report = ReportService(Path(settings.assets_dir))
+        self._roofline = ModelRooflineService(Path(settings.assets_dir))
         self._cost_analysis = CostAnalysisService(self._config.get_economic_assumptions())
 
     def run_baseline(self, prompt: str, max_new_tokens: int) -> RunMetrics:
@@ -69,4 +71,4 @@ class LocalLLMBenchSDK(HardwareProbeMixin):
     def generate_model_roofline(self, results_path: Path, model_params_billion: float) -> Path:
         df = self._report.load_results(results_path)
         roofline_assumptions = self._config.get_roofline_assumptions()
-        return self._report.plot_model_roofline(df, model_params_billion, roofline_assumptions)
+        return self._roofline.plot_model_roofline(df, model_params_billion, roofline_assumptions)

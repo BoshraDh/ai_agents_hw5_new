@@ -187,11 +187,30 @@ drift, טסט RAM-sampling חסר יציבות, matplotlib backend).
       קבצי mock אמיתיים לתוך `results/` האמיתי (ולא ל-`tmp_path` המבודד) בגלל
       שה-fixture `project_root` לא ביצע `chdir` — כל הרצת `pytest` זיהמה את
       תיקיית הראיות האמיתית. תוקן עם `monkeypatch.chdir(tmp_path)` ב-`conftest.py`.
+- [x] **בדיקה יזומה מול `software_submission_guidelines-V3.pdf` חשפה עוד תקלה
+      אמיתית**: `report_service.py` חצה את מגבלת ה-150 שורות המחייבת (הגיע ל-175
+      לאחר התיקונים לעיל). תוקן — פוצל ל-`report_service.py` (120 שורות) +
+      קובץ/מחלקה נפרדים `model_roofline_service.py`/`ModelRooflineService` (73
+      שורות) לפי ADR-9. עודכנו `sdk.py`, הבדיקות (`test_model_roofline_service.py`
+      חדש), ו-`docs/PLAN.md`/`docs/PRD_benchmark_reporting.md` בהתאם.
+- [x] `prompt_log.md` עודכן לכלול את כל שלב Phase 4 (עד לכתיבת שורה זו) — היה
+      נעצר ב"שלב 6" בלבד.
 - [ ] מילוי טופס ה-Word הרשמי → שמירה כ-`uoh-rl07-ex05.pdf` (ידני, ללא שינוי שדות)
 - [ ] הגשה במודל (כל חבר/ת קבוצה בנפרד) + עדכון קישור GitHub סופי
 
 ## Phase 5 — ליטוש וסגירה
 - [x] וידוא ש-`README.md` קריא לקורא חיצוני ועומד בכל דרישות ex05 §8
-- [ ] בדיקת רשימת הבדיקה הסופית מול §17/20.9 ב-`software_submission_guidelines-V3.pdf`
-- [ ] tag גרסה (`v1.00`) ב-git
-- [ ] Push סופי ל-`origin main`
+- [x] **בדיקת רשימת הבדיקה הסופית מול §17/20.9 ב-`software_submission_guidelines-V3.pdf`**
+      — בוצעה בפועל: קבצי חובה קיימים (README/PRD/PLAN/TODO/PRD ייעודיים/
+      prompt_log), ארכיטקטורת SDK+Gatekeeper+mixins ללא כפילות קוד, כל קבצי
+      הקוד ≤150 שורות (אומת מחדש לאחר התיקון לעיל), `pytest`/`ruff` נקיים,
+      `uv.lock`/`.env-example` קיימים ו-`.env` לא ב-git, C4-style architecture
+      diagram + deployment diagram נוספו ל-`PLAN.md` (Context/Container/
+      Component/Code). **שני פערים ידועים ונותרו במודע**: (1) "צילומי מסך" —
+      לא ניתן להפיק כסוכן AI ללא ממשק גרפי; הוחלף בפלט טרמינל מלא ומצוטט (מצוין
+      במפורש ב-README). (2) טבלת עלויות/tokens עבור השימוש בסוכן ה-AI עצמו
+      לבניית הפרויקט (`software_submission_guidelines` §11) לא הופקה — לא
+      נדרשת ב-ex05 עצמו (שדורש ניתוח כלכלי אחר, של הרצת ה-LLM הנבדק, שכן בוצע
+      במלואו), ומדובר בסעיף כללי-לא-מחייב לפי הצהרת §19 של ההנחיות.
+- [x] tag גרסה (`v1.00`) ב-git
+- [x] Push סופי ל-`origin main`
