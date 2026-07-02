@@ -111,10 +111,54 @@ HTTP 500, נכשל אחרי 6.28 שניות בלבד
 
 ראיה גולמית: `results/ollama_qwen72b_fail_evidence.json`.
 
-### ⏳ ניסוי 3 — אותו מודל (Qwen2.5-72B) דרך AirLLM (בתהליך)
+### ✅ ניסוי 3 — Phi-3-medium (14B) דרך AirLLM — **ההדגמה המרכזית של המטלה**
 
-הצעד הבא: להריץ את אותו מודל (או את המודל הראשי Phi-3-medium) דרך AirLLM
-ולתעד הצלחה חרף אותו מגבלת ~7.65GB RAM. עדיין לא בוצע.
+**מטרה:** להראות שאותה מגבלת ~7.65GB RAM שגרמה לכישלון בניסוי 2 **לא** מונעת
+הרצה של מודל גדול — כאשר משתמשים ב-AirLLM. **תוצאה: הצלחה מלאה.**
+
+**תקלה שנמצאה ותוקנה בדרך:** הניסיון הראשון נכשל עם `"Torch not compiled with
+CUDA enabled"` — התברר ש-`airllm.AutoModel.from_pretrained` ברירת המחדל שלו
+`device="cuda:0"`, וזה לא קיים אצלנו. תוקן ב-`airllm_service.py`
+(`device="cpu"` מועבר במפורש כעת). ראיה: `results/airllm_phi3_medium_first_attempt_cuda_error.json`.
+
+לאחר התיקון:
+
+```json
+{
+  "model": "microsoft/Phi-3-medium-4k-instruct (14B)",
+  "succeeded": true,
+  "peak_ram_mb": 903.2,
+  "ttft_sec": 79.361,
+  "tpot_sec": 43.07,
+  "tokens_per_sec": 0.023,
+  "total_wall_time_sec": 1375.145,
+  "generated_text": "Virtual memory is a memory management technique that
+                      provides an \"idealized abstraction of the storage
+                      resources that are..."
+}
+```
+
+**טבלת השוואה — Baseline מול AirLLM:**
+
+| מדד | Baseline (qwen2.5:72b, Ollama) | AirLLM (Phi-3-medium, 14B) |
+|---|---|---|
+| הצליח? | ❌ לא | ✅ כן |
+| זמן עד כישלון/הצלחה | 6.28s (כישלון) | ~23 דקות (הצלחה) |
+| Peak RAM | — (נכשל לפני הקצאה) | **903 MB** |
+| שגיאה | "unable to allocate CPU buffer" (~19.2GB) | אין |
+
+**ניתוח (עונה על שאלות מחקר #1, #2, #5):** זהו בדיוק ה-trade-off שההרצאה מתארת —
+AirLLM מוותר על מהירות (0.023 טוקנים/שנייה בלבד — כמעט 44 שניות לכל טוקן בודד ב-
+Decode) בתמורה לזיכרון זעום (903MB, פחות מ-1/30 מגודל המודל בדיסק). מנגנון
+העבודה: כל שכבה מהמודל (מתוך 40) נטענת מהדיסק, מופעלת על הקלט, ואז משוחררת מיד
+לפני טעינת השכבה הבאה — בדיוק כמו Paging במערכות הפעלה. TTFT (79.4s) גבוה כי
+שלב ה-Prefill חייב לזרום דרך כל 40 השכבות פעם אחת; TPOT (43.1s/טוקן) גבוה כי
+**כל טוקן חדש ב-Decode דורש זרימה מחודשת של כל 40 השכבות מהדיסק** — אין שום
+"שמירה בזיכרון" בין טוקנים, ולכן קצב היצירה מוגבל לגמרי על ידי מהירות ה-I/O
+מהדיסק (memory/IO-bound באופן מובהק, לא compute-bound).
+
+ראיות גולמיות: `results/airllm_phi3_medium_success.json`,
+`results/airllm_phi3_medium_first_attempt_cuda_error.json`.
 
 ## הוראות התקנה
 

@@ -34,9 +34,14 @@ class AirllmService(BaseMetricsCollectorMixin, StreamingTimingMixin):
         wall_start = time.monotonic()
         try:
             load_start = time.monotonic()
+            # AirLLM defaults to device="cuda:0"; this project targets CPU-only hardware
+            # (confirmed via HardwareProbeMixin — no CUDA GPU on this machine), so "cpu"
+            # must be passed explicitly or loading fails with "Torch not compiled with
+            # CUDA enabled" (observed in practice during Phase 4 execution).
             model = self._gatekeeper.execute(
                 lambda: AutoModel.from_pretrained(
-                    model_name, layer_shards_saving_path=self._layer_shards_saving_path,
+                    model_name, device="cpu",
+                    layer_shards_saving_path=self._layer_shards_saving_path,
                 ),
                 description=f"AirLLM load {model_name}",
             )

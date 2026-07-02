@@ -16,6 +16,7 @@ htmlcov/
 *.safetensors
 *.gguf
 *.bin
+data/airllm_cache/
 
 # OS
 .DS_Store

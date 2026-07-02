@@ -101,13 +101,20 @@ Model Roofline), ו-Phase 4 עודכן לכלול בדיקת עשן, שאלות 
       + תועד ב-README "יומן ניסויים" ניסוי 2.
 - [x] **תיקון קריטי**: התגלה שמדידת ה-RAM המקורית (76GB) הייתה שגויה פי 10 —
       בפועל ~7.65GB. תוקן ב-PRD/PLAN/README (v1.02).
-- [ ] אותו מודל גדול (או Phi-3-medium), הפעם דרך AirLLM (Hugging Face SafeTensors)
-      — הרצה + תיעוד הצלחה עם peak RAM נמוך משמעותית
-- [ ] הרצת Baseline הרשמי (FP32, Phi-3-medium-4k-instruct) + מדידת TTFT/TPOT/RAM —
-      **לתעד בפירוט חי גם אם המודל נכשל/נתקע/איטי מדי** (זו תוצאה לגיטימית)
-- [ ] הרצת AirLLM על Phi-3-medium בדיוק + אותן מדידות (להשוואה כמותית מלאה)
-- [ ] `ollama pull` למודל/גרסה קוונטזית מקבילה, הרצה בלפחות 2 רמות קוונטיזציה
-      (למשל Q4_K_M, Q2_K) + הערכת איכות פלט איכותנית
+- [x] **Phi-3-medium (14B) דרך AirLLM — ההדגמה המרכזית: הצלחה מלאה.**
+      תקלה נמצאה ותוקנה בדרך (`device="cuda:0"` ברירת מחדל של airllm, לא קיים
+      GPU → תוקן ל-`device="cpu"` ב-`airllm_service.py`). תוצאה: peak RAM
+      903.2MB, TTFT 79.4s, TPOT 43.1s/token, tokens/sec 0.023, סה"כ ~23 דקות.
+      טקסט שנוצר תקין ורלוונטי לנושא. ראיות: `results/airllm_phi3_medium_success.json`,
+      `results/airllm_phi3_medium_first_attempt_cuda_error.json`. תועד ב-README
+      "יומן ניסויים" ניסוי 3 עם טבלת השוואה מלאה מול ניסוי 2.
+- [x] **טבלת השוואה Baseline (נכשל) מול AirLLM (הצליח)** — ב-README, כולל ניתוח
+      הקושר לשאלות מחקר #1/#2/#5.
+- [ ] הרצת Baseline הרשמי דרך `ModelLoaderService` (HF transformers ישיר, לא
+      Ollama) על Phi-3-medium — לתיעוד כמותי מלא מול AirLLM עם אותו קוד/מדדים
+      בדיוק (במקום ההשוואה הנוכחית שמערבבת Ollama-baseline מול AirLLM-Phi3)
+- [ ] `ollama pull` למודל/גרסה קוונטזית מקבילה (Phi-3-medium), הרצה בלפחות 2
+      רמות קוונטיזציה (למשל Q4_K_M, Q2_K) + הערכת איכות פלט איכותנית
 - [ ] הרצת `run_full_benchmark_suite` (ניתוח רגישות: אורכי פרומפט/טוקנים, OAT)
 - [ ] הרצת `generate_report` → טבלה + גרפי peak RAM, tokens/sec, **Model Roofline**
 - [ ] הרצת `run_economic_analysis` → גרף נקודת-איזון (break-even) + המלצה מנומקת

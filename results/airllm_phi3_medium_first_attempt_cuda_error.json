@@ -1,0 +1,12 @@
+{
+  "purpose": "First AirLLM attempt on Phi-3-medium — documents a real configuration bug found and fixed during Phase 4 (not a hardware limitation).",
+  "method": "airllm",
+  "model_name": "microsoft/Phi-3-medium-4k-instruct",
+  "succeeded": false,
+  "error": "AirLLM load microsoft/Phi-3-medium-4k-instruct failed after 3 attempts",
+  "root_cause": "Torch not compiled with CUDA enabled",
+  "explanation": "airllm.AutoModel.from_pretrained defaults to device='cuda:0'. This machine has no CUDA GPU (torch installed is the CPU-only build, torch==2.12.1+cpu), so the call failed on all 3 gatekeeper retries. Fixed by passing device='cpu' explicitly in src/local_llm_bench/services/airllm_service.py.",
+  "total_wall_time_sec": 1740.343,
+  "note": "Most of this time was the one-time cost of downloading the 14B model (~28GB) and splitting it into 40 per-layer SafeTensors shards under data/airllm_cache/splitted_model — this is cached and reused by subsequent runs, which is why the second (successful) attempt completed in ~23 minutes total instead of needing to repeat the download.",
+  "timestamp": "2026-07-02T11:42:20Z"
+}

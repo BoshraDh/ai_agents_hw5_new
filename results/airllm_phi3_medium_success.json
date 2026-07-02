@@ -1,0 +1,27 @@
+{
+  "purpose": "Core assignment demonstration (ex05 section 5.3): the same class of oversized model that fails via direct/Ollama loading succeeds via AirLLM's layer-by-layer streaming, at the cost of extreme latency.",
+  "method": "airllm",
+  "model_name": "microsoft/Phi-3-medium-4k-instruct",
+  "model_params_billion": 14,
+  "device": "cpu",
+  "prompt": "Explain in one short sentence what virtual memory is.",
+  "prompt_tokens": 11,
+  "max_new_tokens": 30,
+  "succeeded": true,
+  "generated_text": "\n\n\n### response\n\nVirtual memory is a memory management technique that provides an \"idealized abstraction of the storage resources that are",
+  "load_time_sec": 3.591,
+  "ttft_sec": 79.361,
+  "tpot_sec": 43.07,
+  "tokens_per_sec": 0.023,
+  "peak_ram_mb": 903.2,
+  "total_wall_time_sec": 1375.145,
+  "estimated_power_wh": 10.6956,
+  "system_ram_gb": 7.65,
+  "prior_attempt_note": "First attempt (before fix) failed with 'Torch not compiled with CUDA enabled' because airllm.AutoModel defaults to device='cuda:0'. Fixed by passing device='cpu' explicitly (src/local_llm_bench/services/airllm_service.py). Model shard splitting (40 layers, ~28GB download) took ~27 minutes on the first run and was cached under data/airllm_cache/ for this successful re-run.",
+  "comparison_to_baseline": {
+    "baseline_model": "qwen2.5:72b via Ollama",
+    "baseline_result": "failed in 6.28s: unable to allocate CPU buffer (~19.2GB requested vs ~7.65GB RAM available)",
+    "contrast": "AirLLM succeeded on a 14B model using only 903MB peak RAM (vs tens of GB required for direct loading), at the cost of ~23 minutes wall time for 30 tokens (0.023 tokens/sec) — a textbook memory-for-latency trade-off."
+  },
+  "timestamp": "2026-07-02T12:08:02Z"
+}
