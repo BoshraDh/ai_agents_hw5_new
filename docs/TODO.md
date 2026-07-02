@@ -128,9 +128,14 @@ Model Roofline), ו-Phase 4 עודכן לכלול בדיקת עשן, שאלות 
       חלקית; רמה שנייה תעשיר את הניתוח אך אינה חובה מוחלטת)
 - [ ] הרצת `run_full_benchmark_suite` (ניתוח רגישות: אורכי פרומפט/טוקנים, OAT)
 - [ ] הרצת `generate_report` → טבלה + גרפי peak RAM, tokens/sec, **Model Roofline**
-- [ ] הרצת `run_economic_analysis` → גרף נקודת-איזון (break-even) + המלצה מנומקת
+- [x] **ניתוח כלכלי (חובה, ex05 §5.5) — הושלם.** `run_economic_analysis` הורץ עם
+      זמן ריצה אמיתי (585.9s, מניסוי 4). נקודת איזון: **10,000 בקשות/חודש**.
+      גרף: `assets/breakeven_analysis.png`, ראיה: `results/economic_analysis.json`.
+      טבלת עלויות מלאה + המלצה מנומקת ב-README ניסוי 5 (עונה על שאלת מחקר #6).
 - [ ] מילוי `notebooks/results_analysis.ipynb` בתוצאות אמיתיות
-- [ ] **מענה מפורש לכל 6 שאלות המחקר** מ-`docs/PRD.md` §1.1 (בתוך הדוח)
+- [x] **מענה מפורש לשאלות מחקר #1, #2, #3, #5, #6** (מתוך 6) — ר' README ניסויים
+      2-5. נותרה: שאלה #4 (Prefill/Decode דרך TTFT/TPOT — יש נתונים גולמיים
+      בכל הניסויים, נדרש רק ניסוח מפורש מרוכז בדוח הסופי)
 - [ ] קישור כל ממצא למושגי ההרצאה (Prefill/Decode, VRAM, Virtual Memory, Paging —
       ex05 §5.6)
 - [ ] **כתיבת/מיזוג הדוח הטכני המלא לתוך `README.md`** (לא כמסמך נפרד!) — כולל
